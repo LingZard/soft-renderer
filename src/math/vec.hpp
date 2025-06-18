@@ -4,21 +4,27 @@
 #include <cmath>
 #include <functional>
 #include <initializer_list>
+#include <iostream>
 #include <numeric>
-#include <ostream>
 #include <stdexcept>
+#include <type_traits>
 
 #include "../types.hpp"
 
 // ===========================
-// VecBase<T, N, Derived>
+// VecBase
 // ===========================
 template <typename T, u32 N, typename Derived>
 struct VecBase {
+ protected:
+  using Self = VecBase<T, N, Derived>;
   T data_[N]{};
 
-  using Self = VecBase<T, N, Derived>;
+ public:
+  // 1. Types and Constants
+  using Scalar = T;
 
+  // 2. Constructors
   VecBase() = default;
   VecBase(const T& value) { std::fill(data_, data_ + N, value); }
   VecBase(std::initializer_list<T> list) {
@@ -26,6 +32,7 @@ struct VecBase {
     std::copy(list.begin(), list.end(), data_);
   }
 
+  // 3. Static Factory Methods
   static Derived zero() {
     Derived result;
     std::fill(result.data_, result.data_ + N, T{0});
@@ -38,11 +45,7 @@ struct VecBase {
     return result;
   }
 
-  T* begin() { return data_; };
-  T* end() { return data_ + N; };
-  const T* begin() const { return data_; };
-  const T* end() const { return data_ + N; };
-
+  // 4. Accessors
   T& operator[](u32 index) {
     assert(index < N);
     return data_[index];
@@ -52,6 +55,12 @@ struct VecBase {
     return data_[index];
   }
 
+  T* begin() { return data_; };
+  T* end() { return data_ + N; };
+  const T* begin() const { return data_; };
+  const T* end() const { return data_ + N; };
+
+  // 5. Arithmetic Operators (Vector-Vector)
   Derived operator+(const Derived& other) const {
     Derived result;
     std::transform(data_, data_ + N, other.data_, result.data_, std::plus<>());
@@ -64,6 +73,21 @@ struct VecBase {
     return result;
   }
 
+  Derived operator*(const Derived& other) const {
+    Derived result;
+    std::transform(data_, data_ + N, other.data_, result.data_,
+                   std::multiplies<>());
+    return result;
+  }
+
+  Derived operator/(const Derived& other) const {
+    Derived result;
+    std::transform(data_, data_ + N, other.data_, result.data_,
+                   std::divides<>());
+    return result;
+  }
+
+  // 6. Arithmetic Operators (Vector-Scalar)
   Derived operator*(const T& scalar) const {
     Derived result;
     std::transform(data_, data_ + N, result.data_,
@@ -71,6 +95,15 @@ struct VecBase {
     return result;
   }
 
+  Derived operator/(const T& scalar) const {
+    Derived result;
+    T inv_scalar = T{1} / scalar;
+    std::transform(data_, data_ + N, result.data_,
+                   [inv_scalar](const T& val) { return val * inv_scalar; });
+    return result;
+  }
+
+  // 7. Compound Assignment Operators
   Derived& operator+=(const Derived& other) {
     std::transform(data_, data_ + N, other.data_, data_, std::plus<>());
     return static_cast<Derived&>(*this);
@@ -87,15 +120,27 @@ struct VecBase {
     return static_cast<Derived&>(*this);
   }
 
-  bool operator==(const Self& other) const {
+  Derived& operator/=(const T& scalar) {
+    T inv_scalar = T{1} / scalar;
+    std::transform(data_, data_ + N, data_,
+                   [inv_scalar](const T& val) { return val * inv_scalar; });
+    return static_cast<Derived&>(*this);
+  }
+
+  // 8. Comparison Operators
+  bool operator==(const Derived& other) const {
     return this == &other || std::equal(data_, data_ + N, other.data_);
   }
+
+  // 9. Methods
+  void fill(const T& value) { std::fill(data_, data_ + N, value); }
 
   T dot(const Derived& other) const {
     return std::inner_product(data_, data_ + N, other.data_, T{0});
   }
 
-  T norm() const { return std::sqrt(dot(static_cast<const Derived&>(*this))); }
+  T length_sqr() const { return dot(static_cast<const Derived&>(*this)); }
+  T norm() const { return std::sqrt(length_sqr()); }
 
   void normalize() {
     T n = norm();
@@ -115,6 +160,7 @@ struct VecBase {
 
   constexpr u32 length() const { return N; }
 
+  // 10. Friend Functions
   friend std::ostream& operator<<(std::ostream& os, const Self& vec) {
     os << "[";
     for (u32 i = 0; i < N; ++i) {
@@ -129,7 +175,7 @@ struct VecBase {
 };
 
 // ===========================
-// VecBase<T, N, Derived>
+// Vec
 // ===========================
 template <typename T, u32 N>
 struct Vec : public VecBase<T, N, Vec<T, N>> {
@@ -146,8 +192,8 @@ struct Vec<T, 2> : public VecBase<T, 2, Vec<T, 2>> {
   using Base::Base;
 
   T& x() { return this->data_[0]; }
-  T& y() { return this->data_[1]; }
   const T& x() const { return this->data_[0]; }
+  T& y() { return this->data_[1]; }
   const T& y() const { return this->data_[1]; }
 };
 
@@ -160,10 +206,10 @@ struct Vec<T, 3> : public VecBase<T, 3, Vec<T, 3>> {
   using Base::Base;
 
   T& x() { return this->data_[0]; }
-  T& y() { return this->data_[1]; }
-  T& z() { return this->data_[2]; }
   const T& x() const { return this->data_[0]; }
+  T& y() { return this->data_[1]; }
   const T& y() const { return this->data_[1]; }
+  T& z() { return this->data_[2]; }
   const T& z() const { return this->data_[2]; }
 
   Vec cross(const Vec& other) const {
@@ -183,24 +229,43 @@ struct Vec<T, 4> : public VecBase<T, 4, Vec<T, 4>> {
   using Base::Base;
 
   T& x() { return this->data_[0]; }
-  T& y() { return this->data_[1]; }
-  T& z() { return this->data_[2]; }
-  T& w() { return this->data_[3]; }
   const T& x() const { return this->data_[0]; }
+  T& y() { return this->data_[1]; }
   const T& y() const { return this->data_[1]; }
+  T& z() { return this->data_[2]; }
   const T& z() const { return this->data_[2]; }
+  T& w() { return this->data_[3]; }
   const T& w() const { return this->data_[3]; }
 };
 
 // ===========================
-// frequently used types
+// Free Functions
+// ===========================
+template <typename T, u32 N>
+Vec<T, N> operator*(const T& scalar, const Vec<T, N>& vec) {
+  return vec * scalar;
+}
+
+template <typename T, u32 N>
+Vec<T, N> lerp(const Vec<T, N>& a, const Vec<T, N>& b, T t) {
+  return a * (1 - t) + b * t;
+}
+
+// ===========================
+// Type Aliases
 // ===========================
 using Vec2f = Vec<float, 2>;
 using Vec3f = Vec<float, 3>;
 using Vec4f = Vec<float, 4>;
+
+using Vec2d = Vec<double, 2>;
+using Vec3d = Vec<double, 3>;
+using Vec4d = Vec<double, 4>;
+
 using Vec2i = Vec<int, 2>;
 using Vec3i = Vec<int, 3>;
 using Vec4i = Vec<int, 4>;
+
 using Vec2u = Vec<u32, 2>;
 using Vec3u = Vec<u32, 3>;
 using Vec4u = Vec<u32, 4>;
