@@ -9,13 +9,19 @@
 
 #include "vec.hpp"
 
-// 不同于VecBase<T, N, Derived>, 这里使用MatBase<Derived>
-// MatBase并不存储数据，只定义行为，具体实现由派生类提供
-// 有点像 Rust 中的 trait
-// 之所以这么做，是用MatBase<T, M, N,
-// Derived>定义的话不好拿返回类型，丧失了定义Derived的优势
-// PS:
-// 我目前这样写其实是没体现CRTP的优势的，因为我只写了*和transpose，而且没做什么偏特化，主要是学习目的
+namespace soft_renderer {
+namespace math {
+
+// A bit different from VecBase, here we just use MatBase<Derived>.
+// MatBase itself doesn't store data; it only defines behavior, with the
+// actual implementation provided by the derived class (a bit like a Rust
+// trait). The reason for this design is that using MatBase<T, M, N, Derived>
+// would make it difficult to deduce return types, negating some benefits of
+// CRTP.
+//
+// P.S. The current implementation doesn't fully leverage CRTP's power, as it
+// only includes basic operators like `*` and `transpose` without partial
+// specializations. This is primarily for learning purposes.
 template <typename Derived>
 struct MatBase {
  public:
@@ -30,7 +36,7 @@ struct MatBase {
   auto transpose() const { return derived()._transpose(); }
 };
 
-template <typename T, u32 M, u32 N>
+template <typename T, uint32_t M, uint32_t N>
 struct Mat : public MatBase<Mat<T, M, N>> {
  private:
   using Self = Mat<T, M, N>;
@@ -50,8 +56,8 @@ struct Mat : public MatBase<Mat<T, M, N>> {
   // 1. Types and Constants
   using MatBase<Self>::operator*;
   using Scalar = T;
-  static constexpr u32 Rows = M;
-  static constexpr u32 Cols = N;
+  static constexpr uint32_t Rows = M;
+  static constexpr uint32_t Cols = N;
 
   // 2. Constructors
   Mat() = default;
@@ -63,44 +69,44 @@ struct Mat : public MatBase<Mat<T, M, N>> {
   // 3. Static Factory Methods
   static Self identity() {
     Self result;
-    u32 min_dim = (M < N) ? M : N;
-    for (u32 i = 0; i < min_dim; ++i) {
+    uint32_t min_dim = (M < N) ? M : N;
+    for (uint32_t i = 0; i < min_dim; ++i) {
       result.cols_[i][i] = T{1};
     }
     return result;
   }
 
   // 4. Accessors
-  ColVecType& operator[](u32 index) {
+  ColVecType& operator[](uint32_t index) {
     assert(index < N);
     return cols_[index];
   }
-  const ColVecType& operator[](u32 index) const {
+  const ColVecType& operator[](uint32_t index) const {
     assert(index < N);
     return cols_[index];
   }
 
-  T& operator()(u32 row, u32 col) {
+  T& operator()(uint32_t row, uint32_t col) {
     assert(row < M && col < N);
     return cols_[col][row];
   }
-  const T& operator()(u32 row, u32 col) const {
+  const T& operator()(uint32_t row, uint32_t col) const {
     assert(row < M && col < N);
     return cols_[col][row];
   }
 
-  RowVecType row(u32 index) {
+  RowVecType row(uint32_t index) {
     assert(index < M);
     RowVecType row;
-    for (u32 i = 0; i < N; ++i) {
+    for (uint32_t i = 0; i < N; ++i) {
       row[i] = cols_[i][index];
     }
     return row;
   }
-  const RowVecType row(u32 index) const {
+  const RowVecType row(uint32_t index) const {
     assert(index < M);
     RowVecType row;
-    for (u32 i = 0; i < N; ++i) {
+    for (uint32_t i = 0; i < N; ++i) {
       row[i] = cols_[i][index];
     }
     return row;
@@ -109,7 +115,7 @@ struct Mat : public MatBase<Mat<T, M, N>> {
   // 5. Arithmetic Operators
   Self operator+(const Self& other) const {
     Self result;
-    for (u32 i = 0; i < N; ++i) {
+    for (uint32_t i = 0; i < N; ++i) {
       result.cols_[i] = cols_[i] + other.cols_[i];
     }
     return result;
@@ -117,7 +123,7 @@ struct Mat : public MatBase<Mat<T, M, N>> {
 
   Self operator-(const Self& other) const {
     Self result;
-    for (u32 i = 0; i < N; ++i) {
+    for (uint32_t i = 0; i < N; ++i) {
       result.cols_[i] = cols_[i] - other.cols_[i];
     }
     return result;
@@ -125,7 +131,7 @@ struct Mat : public MatBase<Mat<T, M, N>> {
 
   Self operator*(const T& scalar) const {
     Self result;
-    for (u32 i = 0; i < N; ++i) {
+    for (uint32_t i = 0; i < N; ++i) {
       result.cols_[i] = cols_[i] * scalar;
     }
     return result;
@@ -133,21 +139,21 @@ struct Mat : public MatBase<Mat<T, M, N>> {
 
   // 6. Compound Assignment Operators
   Self& operator+=(const Self& other) {
-    for (u32 i = 0; i < N; ++i) {
+    for (uint32_t i = 0; i < N; ++i) {
       cols_[i] += other.cols_[i];
     }
     return *this;
   }
 
   Self& operator-=(const Self& other) {
-    for (u32 i = 0; i < N; ++i) {
+    for (uint32_t i = 0; i < N; ++i) {
       cols_[i] -= other.cols_[i];
     }
     return *this;
   }
 
   Self& operator*=(const T& scalar) {
-    for (u32 i = 0; i < N; ++i) {
+    for (uint32_t i = 0; i < N; ++i) {
       cols_[i] *= scalar;
     }
     return *this;
@@ -156,8 +162,8 @@ struct Mat : public MatBase<Mat<T, M, N>> {
   // 7. Comparison Operators
   bool operator==(const Self& other) const {
     if constexpr (std::is_floating_point_v<T>) {
-      for (u32 i = 0; i < N; ++i) {
-        for (u32 j = 0; j < M; ++j) {
+      for (uint32_t i = 0; i < N; ++i) {
+        for (uint32_t j = 0; j < M; ++j) {
           if (std::abs(cols_[i][j] - other.cols_[i][j]) > epsilon()) {
             return false;
           }
@@ -165,7 +171,7 @@ struct Mat : public MatBase<Mat<T, M, N>> {
       }
       return true;
     } else {
-      for (u32 i = 0; i < N; ++i) {
+      for (uint32_t i = 0; i < N; ++i) {
         if (!(cols_[i] == other.cols_[i])) {
           return false;
         }
@@ -178,7 +184,7 @@ struct Mat : public MatBase<Mat<T, M, N>> {
 
   // 8. Methods
   void fill(const T& value) {
-    for (u32 i = 0; i < N; ++i) cols_[i].fill(value);
+    for (uint32_t i = 0; i < N; ++i) cols_[i].fill(value);
   }
 
   // 8.1. Graphics-specific Methods
@@ -196,26 +202,14 @@ struct Mat : public MatBase<Mat<T, M, N>> {
     cols_[3][2] = trans.z();
   }
 
-  template <u32 BlockRows, u32 BlockCols>
-  Mat<T, BlockRows, BlockCols> topLeftBlock() const {
+  template <uint32_t BlockRows, uint32_t BlockCols>
+  Mat<T, BlockRows, BlockCols> block() const {
     static_assert(M >= BlockRows && N >= BlockCols,
                   "Block size exceeds matrix dimensions");
     Mat<T, BlockRows, BlockCols> result;
-    for (u32 i = 0; i < BlockRows; ++i) {
-      for (u32 j = 0; j < BlockCols; ++j) {
+    for (uint32_t i = 0; i < BlockRows; ++i) {
+      for (uint32_t j = 0; j < BlockCols; ++j) {
         result(i, j) = cols_[j][i];
-      }
-    }
-    return result;
-  }
-
-  template <u32 BlockRows, u32 BlockCols>
-  Mat<T, BlockRows, BlockCols> topRightBlock() const {
-    static_assert(M >= BlockRows && N >= BlockCols);
-    Mat<T, BlockRows, BlockCols> result;
-    for (u32 i = 0; i < BlockRows; ++i) {
-      for (u32 j = 0; j < BlockCols; ++j) {
-        result(i, j) = cols_[N - BlockCols + j][i];
       }
     }
     return result;
@@ -223,7 +217,7 @@ struct Mat : public MatBase<Mat<T, M, N>> {
 
   Mat<T, 3, 3> rotation() const {
     static_assert(M >= 3 && N >= 3, "Matrix too small to extract rotation");
-    return topLeftBlock<3, 3>();
+    return block<3, 3>();
   }
 
   Vec<T, 3> translation() const {
@@ -237,79 +231,84 @@ struct Mat : public MatBase<Mat<T, M, N>> {
     return std::abs(determinant()) >= epsilon();
   }
 
-  Mat<T, M - 1, N - 1> minor(u32 row, u32 col) const {
+  Mat<T, M - 1, N - 1> minor(uint32_t row, uint32_t col) const {
     Mat<T, M - 1, N - 1> result;
-    for (u32 i = 0; i < M; ++i) {
-      for (u32 j = 0; j < N; ++j) {
-        if (i == row || j == col) continue;
-        u32 row_idx = i < row ? i : i - 1;
-        u32 col_idx = j < col ? j : j - 1;
-        result(row_idx, col_idx) = cols_[j][i];
+    uint32_t res_i = 0;
+    for (uint32_t i = 0; i < M; ++i) {
+      if (i == row) continue;
+      uint32_t res_j = 0;
+      for (uint32_t j = 0; j < N; ++j) {
+        if (j == col) continue;
+        result(res_i, res_j) = cols_[j][i];
+        res_j++;
       }
+      res_i++;
     }
     return result;
   }
 
+  // For large matrices, LU decomposition should be used.
+  // Here we use recursive expansion by minors for learning purposes,
+  // even though a direct, hard-coded calculation would be more efficient for
+  // small matrices.
   Scalar determinant() const {
-    // 大规模应该用LU分解
-    // 这里用伴随矩阵和行列式来计算，直接硬计算效率更高，但出于学习目的，递归一下
     static_assert(M == N, "Determinant is only defined for square matrices.");
-    static_assert(
-        M <= 4,
-        "Determinant is only defined for 1x1, 2x2, 3x3, or 4x4 matrices.");
+    static_assert(M <= 4,
+                  "Recursive determinant is only supported for up to 4x4.");
     if constexpr (M == 1) {
       return cols_[0][0];
     } else {
       Scalar result = T{0};
-      for (u32 i = 0; i < N; ++i) {
-        Scalar cofactor = (i % 2 == 0) ? 1 : -1;
-        Mat<T, M - 1, M - 1> minor = this->minor(0, i);
-        result += cofactor * cols_[i][0] * minor.determinant();
+      for (uint32_t i = 0; i < N; ++i) {
+        Scalar cofactor_sign = (i % 2 == 0) ? 1 : -1;
+        result += cofactor_sign * cols_[i][0] * this->minor(0, i).determinant();
       }
       return result;
     }
   }
 
+  // Same as determinant, this calculates the inverse using the adjugate
+  // matrix method, which has O(n!) complexity. This is purely for learning
+  // purposes.
   Mat<T, M, M> inverse() const {
-    // 同determinant，用行列式和伴随矩阵来算，复杂度n!
     static_assert(M == N, "Inverse is only defined for square matrices.");
-    static_assert(
-        M <= 4, "Inverse is only defined for 1x1, 2x2, 3x3, or 4x4 matrices.");
-    if constexpr (M == 1) {
-      return Mat<T, 1, 1>{1 / cols_[0][0]};
-    }
+    static_assert(M <= 4, "Recursive inverse is only supported for up to 4x4.");
 
     T det = this->determinant();
     if (std::abs(det) < epsilon()) {
       throw std::runtime_error("Matrix is singular and cannot be inverted.");
     }
+
+    if constexpr (M == 1) {
+      return Mat<T, 1, 1>{{T{1} / det}};
+    }
+
     T inv_det = T{1} / det;
-    Mat<T, M, M> result;
-    for (u32 i = 0; i < M; ++i) {
-      for (u32 j = 0; j < N; ++j) {
-        Mat<T, M - 1, M - 1> cofactor_matrix = this->minor(i, j);
-        Scalar cofactor = (i + j) % 2 == 0 ? 1 : -1;
-        result(i, j) = cofactor * cofactor_matrix.determinant();
+    Mat<T, M, M> adjugate;
+    for (uint32_t i = 0; i < M; ++i) {
+      for (uint32_t j = 0; j < N; ++j) {
+        Scalar cofactor_sign = ((i + j) % 2 == 0) ? 1 : -1;
+        adjugate(j, i) = cofactor_sign * this->minor(i, j).determinant();
       }
     }
-    return result.transpose() * inv_det;
+    return adjugate * inv_det;
   }
 
   // 9. Underlying CRTP implementations
   Mat<T, N, M> _transpose() const {
     Mat<T, N, M> result;
-    for (u32 i = 0; i < M; ++i) {
-      for (u32 j = 0; j < N; ++j) {
+    for (uint32_t i = 0; i < M; ++i) {
+      for (uint32_t j = 0; j < N; ++j) {
         result[i][j] = cols_[j][i];
       }
     }
     return result;
   }
 
-  template <u32 K>
+  template <uint32_t K>
   Mat<T, M, K> _multiply(const Mat<T, N, K>& other) const {
     Mat<T, M, K> result;
-    for (u32 j = 0; j < K; ++j) {
+    for (uint32_t j = 0; j < K; ++j) {
       result[j] = (*this) * other[j];
     }
     return result;
@@ -317,7 +316,7 @@ struct Mat : public MatBase<Mat<T, M, N>> {
 
   ColVecType _multiply(const Vec<T, N>& vec) const {
     ColVecType result{};
-    for (u32 j = 0; j < N; ++j) {
+    for (uint32_t j = 0; j < N; ++j) {
       result += cols_[j] * vec[j];
     }
     return result;
@@ -326,9 +325,9 @@ struct Mat : public MatBase<Mat<T, M, N>> {
   // 10. Friend Functions
   friend std::ostream& operator<<(std::ostream& os, const Self& mat) {
     os << "[\n";
-    for (u32 i = 0; i < M; ++i) {
+    for (uint32_t i = 0; i < M; ++i) {
       os << "  [";
-      for (u32 j = 0; j < N; ++j) {
+      for (uint32_t j = 0; j < N; ++j) {
         os << mat(i, j);
         if (j < N - 1) {
           os << ", ";
@@ -344,12 +343,65 @@ struct Mat : public MatBase<Mat<T, M, N>> {
   }
 };
 
-// ===========================
-// Free Functions
-// ===========================
-template <typename T, u32 M, u32 N>
+template <typename T, uint32_t M, uint32_t N>
 Mat<T, M, N> operator*(const T& scalar, const Mat<T, M, N>& mat) {
   return mat * scalar;
+}
+
+// ===========================
+// Graphics Transformation Functions
+// ===========================
+
+/// @brief Creates a 4x4 translation matrix.
+/// @param trans The translation vector.
+/// @return A 4x4 translation matrix.
+template <typename T>
+Mat<T, 4, 4> create_translation(const Vec<T, 3>& trans) {
+  Mat<T, 4, 4> result = Mat<T, 4, 4>::identity();
+  result(0, 3) = trans.x();
+  result(1, 3) = trans.y();
+  result(2, 3) = trans.z();
+  return result;
+}
+
+/// @brief Creates a 4x4 scaling matrix.
+/// @param scale The scaling vector.
+/// @return A 4x4 scaling matrix.
+template <typename T>
+Mat<T, 4, 4> create_scale(const Vec<T, 3>& scale) {
+  Mat<T, 4, 4> result = Mat<T, 4, 4>::identity();
+  result(0, 0) = scale.x();
+  result(1, 1) = scale.y();
+  result(2, 2) = scale.z();
+  return result;
+}
+
+/// @brief Creates a 4x4 rotation matrix from an axis and an angle.
+/// @param axis The rotation axis (should be normalized).
+/// @param angle_rad The rotation angle in radians.
+/// @return A 4x4 rotation matrix.
+template <typename T>
+Mat<T, 4, 4> create_rotation(const Vec<T, 3>& axis, T angle_rad) {
+  T const c = std::cos(angle_rad);
+  T const s = std::sin(angle_rad);
+  Vec<T, 3> k = axis.normalized();
+
+  auto rotate_vec = [&](const Vec<T, 3>& v) {
+    // Rodrigues' rotation formula:
+    // v_rot = v*cos(t) + (k x v)*sin(t) + k*(k.v)*(1-cos(t))
+    return v * c + k.cross(v) * s + k * k.dot(v) * (T{1} - c);
+  };
+
+  Vec<T, 3> new_i = rotate_vec({1, 0, 0});
+  Vec<T, 3> new_j = rotate_vec({0, 1, 0});
+  Vec<T, 3> new_k = rotate_vec({0, 0, 1});
+
+  Mat<T, 4, 4> result = Mat<T, 4, 4>::identity();
+  result[0] = Vec<T, 4>(new_i, 0);
+  result[1] = Vec<T, 4>(new_j, 0);
+  result[2] = Vec<T, 4>(new_k, 0);
+
+  return result;
 }
 
 // ===========================
@@ -363,6 +415,5 @@ using Mat2d = Mat<double, 2, 2>;
 using Mat3d = Mat<double, 3, 3>;
 using Mat4d = Mat<double, 4, 4>;
 
-using Mat2i = Mat<int, 2, 2>;
-using Mat3i = Mat<int, 3, 3>;
-using Mat4i = Mat<int, 4, 4>;
+}  // namespace math
+}  // namespace soft_renderer

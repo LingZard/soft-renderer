@@ -4,6 +4,8 @@
 
 #include "../src/math/mat.hpp"
 
+using namespace soft_renderer::math;
+
 TEST_CASE("Mat basic construction and access", "[mat-basic]") {
   // Default constructor
   Mat<float, 2, 2> m1;

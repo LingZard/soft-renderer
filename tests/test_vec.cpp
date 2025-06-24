@@ -4,6 +4,8 @@
 
 #include "../src/math/vec.hpp"
 
+using namespace soft_renderer::math;
+
 TEST_CASE("Vec2 basic operations", "[vec2]") {
   Vec<float, 2> v1{1.0f, 2.0f};
   Vec<float, 2> v2{3.0f, 4.0f};
@@ -16,7 +18,7 @@ TEST_CASE("Vec2 basic operations", "[vec2]") {
   REQUIRE((v1 * 2.0f)[0] == 2.0f);
   REQUIRE((v1 * 2.0f)[1] == 4.0f);
   REQUIRE(v1.dot(v2) == Catch::Approx(11.0f));
-  REQUIRE(v1.length() == 2);
+  REQUIRE(v1.size() == 2);
 }
 
 TEST_CASE("Vec3 cross and norm", "[vec3]") {

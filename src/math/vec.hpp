@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <cstdint>
 #include <functional>
 #include <initializer_list>
 #include <iostream>
@@ -9,12 +10,13 @@
 #include <stdexcept>
 #include <type_traits>
 
-#include "../types.hpp"
+namespace soft_renderer {
+namespace math {
 
 // ===========================
 // VecBase
 // ===========================
-template <typename T, u32 N, typename Derived>
+template <typename T, uint32_t N, typename Derived>
 struct VecBase {
  protected:
   using Self = VecBase<T, N, Derived>;
@@ -23,6 +25,14 @@ struct VecBase {
  public:
   // 1. Types and Constants
   using Scalar = T;
+
+  static constexpr T epsilon() {
+    if constexpr (std::is_floating_point_v<T>) {
+      return std::numeric_limits<T>::epsilon() * 100;
+    } else {
+      return T{0};
+    }
+  }
 
   // 2. Constructors
   VecBase() = default;
@@ -46,11 +56,11 @@ struct VecBase {
   }
 
   // 4. Accessors
-  T& operator[](u32 index) {
+  T& operator[](uint32_t index) {
     assert(index < N);
     return data_[index];
   }
-  const T& operator[](u32 index) const {
+  const T& operator[](uint32_t index) const {
     assert(index < N);
     return data_[index];
   }
@@ -144,11 +154,12 @@ struct VecBase {
 
   void normalize() {
     T n = norm();
-    if (n == 0) {
-      throw std::runtime_error("Cannot normalize a zero vector");
+    if (std::abs(n) < epsilon()) {
+      return;
     }
-    for (u32 i = 0; i < N; ++i) {
-      data_[i] /= n;
+    T inv_n = T{1} / n;
+    for (uint32_t i = 0; i < N; ++i) {
+      data_[i] *= inv_n;
     }
   }
 
@@ -158,12 +169,12 @@ struct VecBase {
     return result;
   }
 
-  constexpr u32 length() const { return N; }
+  constexpr uint32_t size() const { return N; }
 
   // 10. Friend Functions
   friend std::ostream& operator<<(std::ostream& os, const Self& vec) {
     os << "[";
-    for (u32 i = 0; i < N; ++i) {
+    for (uint32_t i = 0; i < N; ++i) {
       os << vec.data_[i];
       if (i < N - 1) {
         os << ", ";
@@ -177,7 +188,7 @@ struct VecBase {
 // ===========================
 // Vec
 // ===========================
-template <typename T, u32 N>
+template <typename T, uint32_t N>
 struct Vec : public VecBase<T, N, Vec<T, N>> {
   using Base = VecBase<T, N, Vec<T, N>>;
   using Base::Base;
@@ -190,6 +201,12 @@ template <typename T>
 struct Vec<T, 2> : public VecBase<T, 2, Vec<T, 2>> {
   using Base = VecBase<T, 2, Vec<T, 2>>;
   using Base::Base;
+
+  Vec(T x, T y) : Base({x, y}) {};
+
+  // Conversion constructors
+  explicit Vec(const Vec<T, 3>& v) : Base({v.x(), v.y()}) {}
+  explicit Vec(const Vec<T, 4>& v) : Base({v.x(), v.y()}) {}
 
   T& x() { return this->data_[0]; }
   const T& x() const { return this->data_[0]; }
@@ -204,6 +221,12 @@ template <typename T>
 struct Vec<T, 3> : public VecBase<T, 3, Vec<T, 3>> {
   using Base = VecBase<T, 3, Vec<T, 3>>;
   using Base::Base;
+
+  Vec(T x, T y, T z) : Base({x, y, z}) {};
+
+  // Conversion constructors
+  Vec(const Vec<T, 2>& v, T z) : Base({v.x(), v.y(), z}) {}
+  explicit Vec(const Vec<T, 4>& v) : Base({v.x(), v.y(), v.z()}) {}
 
   T& x() { return this->data_[0]; }
   const T& x() const { return this->data_[0]; }
@@ -228,6 +251,12 @@ struct Vec<T, 4> : public VecBase<T, 4, Vec<T, 4>> {
   using Base = VecBase<T, 4, Vec<T, 4>>;
   using Base::Base;
 
+  Vec(T x, T y, T z, T w) : Base({x, y, z, w}) {};
+
+  // Conversion constructors
+  Vec(const Vec<T, 3>& v, T w) : Base({v.x(), v.y(), v.z(), w}) {}
+  explicit Vec(const Vec<T, 2>& v, T z, T w) : Base({v.x(), v.y(), z, w}) {}
+
   T& x() { return this->data_[0]; }
   const T& x() const { return this->data_[0]; }
   T& y() { return this->data_[1]; }
@@ -241,12 +270,12 @@ struct Vec<T, 4> : public VecBase<T, 4, Vec<T, 4>> {
 // ===========================
 // Free Functions
 // ===========================
-template <typename T, u32 N>
+template <typename T, uint32_t N>
 Vec<T, N> operator*(const T& scalar, const Vec<T, N>& vec) {
   return vec * scalar;
 }
 
-template <typename T, u32 N>
+template <typename T, uint32_t N>
 Vec<T, N> lerp(const Vec<T, N>& a, const Vec<T, N>& b, T t) {
   return a * (1 - t) + b * t;
 }
@@ -266,6 +295,9 @@ using Vec2i = Vec<int, 2>;
 using Vec3i = Vec<int, 3>;
 using Vec4i = Vec<int, 4>;
 
-using Vec2u = Vec<u32, 2>;
-using Vec3u = Vec<u32, 3>;
-using Vec4u = Vec<u32, 4>;
+using Vec2u = Vec<uint32_t, 2>;
+using Vec3u = Vec<uint32_t, 3>;
+using Vec4u = Vec<uint32_t, 4>;
+
+}  // namespace math
+}  // namespace soft_renderer
