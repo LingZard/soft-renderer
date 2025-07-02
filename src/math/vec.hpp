@@ -83,6 +83,12 @@ struct VecBase {
     return result;
   }
 
+  Derived operator-() const {
+    Derived result;
+    std::transform(data_, data_ + N, result.data_, std::negate<>());
+    return result;
+  }
+
   Derived operator*(const Derived& other) const {
     Derived result;
     std::transform(data_, data_ + N, other.data_, result.data_,

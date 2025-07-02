@@ -317,3 +317,47 @@ TEST_CASE("Mat minor", "[mat-minor]") {
   REQUIRE(minor_11(1, 0) == 3.0f);
   REQUIRE(minor_11(1, 1) == 9.0f);
 }
+
+TEST_CASE("Graphics transformation matrices", "[mat-graphics]") {
+  SECTION("perspective matrix correctness") {
+    double aspect = 16.0 / 9.0;
+    double fov_y_rad = M_PI / 2.0;  // 90 degrees
+    double near = 0.1;
+    double far = 1000.0;
+    Mat4d proj = perspective(aspect, fov_y_rad, near, far);
+
+    // A point on the near plane should be transformed to NDC z = -1
+    Vec4d point_on_near_view = {1.0, 1.0, -near, 1.0};
+    Vec4d point_on_near_clip = proj * point_on_near_view;
+    double z_ndc_near = point_on_near_clip.z() / point_on_near_clip.w();
+    REQUIRE(z_ndc_near == Catch::Approx(-1.0));
+
+    // A point on the far plane should be transformed to NDC z = +1
+    Vec4d point_on_far_view = {10.0, 10.0, -far, 1.0};
+    Vec4d point_on_far_clip = proj * point_on_far_view;
+    double z_ndc_far = point_on_far_clip.z() / point_on_far_clip.w();
+    REQUIRE(z_ndc_far == Catch::Approx(1.0));
+  }
+
+  SECTION("orthographic matrix correctness") {
+    double left = -10, right = 10, bottom = -5, top = 5;
+    double near = 0.1, far = 100.0;
+    Mat4d proj = orthographic(left, right, bottom, top, near, far);
+
+    // Point at bottom-left corner on near plane should map to NDC (-1, -1, -1)
+    Vec4d point_bl_view = {left, bottom, -near, 1.0};
+    Vec4d point_bl_ndc = proj * point_bl_view;
+    REQUIRE(point_bl_ndc.x() == Catch::Approx(-1.0));
+    REQUIRE(point_bl_ndc.y() == Catch::Approx(-1.0));
+    REQUIRE(point_bl_ndc.z() == Catch::Approx(-1.0));
+    REQUIRE(point_bl_ndc.w() == Catch::Approx(1.0));
+
+    // Point at top-right corner on far plane should map to NDC (1, 1, 1)
+    Vec4d point_tr_view = {right, top, -far, 1.0};
+    Vec4d point_tr_ndc = proj * point_tr_view;
+    REQUIRE(point_tr_ndc.x() == Catch::Approx(1.0));
+    REQUIRE(point_tr_ndc.y() == Catch::Approx(1.0));
+    REQUIRE(point_tr_ndc.z() == Catch::Approx(1.0));
+    REQUIRE(point_tr_ndc.w() == Catch::Approx(1.0));
+  }
+}
