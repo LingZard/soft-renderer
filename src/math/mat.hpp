@@ -111,8 +111,22 @@ struct Mat : public MatBase<Mat<T, M, N>> {
     }
     return row;
   }
+  ColVecType col(uint32_t index) {
+    assert(index < N);
+    return cols_[index];
+  }
+  const ColVecType col(uint32_t index) const {
+    assert(index < N);
+    return cols_[index];
+  }
 
-  // 5. Arithmetic Operators
+  // 5. Public Methods
+  void set_col(uint32_t index, const ColVecType& col_vec) {
+    assert(index < N);
+    cols_[index] = col_vec;
+  }
+
+  // 6. Arithmetic Operators
   Self operator+(const Self& other) const {
     Self result;
     for (uint32_t i = 0; i < N; ++i) {
@@ -137,7 +151,7 @@ struct Mat : public MatBase<Mat<T, M, N>> {
     return result;
   }
 
-  // 6. Compound Assignment Operators
+  // 7. Compound Assignment Operators
   Self& operator+=(const Self& other) {
     for (uint32_t i = 0; i < N; ++i) {
       cols_[i] += other.cols_[i];
@@ -159,7 +173,7 @@ struct Mat : public MatBase<Mat<T, M, N>> {
     return *this;
   }
 
-  // 7. Comparison Operators
+  // 8. Comparison Operators
   bool operator==(const Self& other) const {
     if constexpr (std::is_floating_point_v<T>) {
       for (uint32_t i = 0; i < N; ++i) {
@@ -401,6 +415,60 @@ Mat<T, 4, 4> create_rotation(const Vec<T, 3>& axis, T angle_rad) {
   result[1] = Vec<T, 4>(new_j, 0);
   result[2] = Vec<T, 4>(new_k, 0);
 
+  return result;
+}
+
+// We've implemented `look_at` here, but our Camera class uses quaternions
+// directly for orientation, so this function won't actually be called in the
+// current setup. It's here for completeness and testing purposes.
+template <typename T>
+Mat<T, 4, 4> look_at(const Vec<T, 3>& eye, const Vec<T, 3>& center,
+                     const Vec<T, 3>& world_up) {
+  // Using the standard OpenGL convention.
+  // Some checks are omitted for brevity (e.g., eye != center, forward and up
+  // are not parallel). The basis vectors are defined as right (local X), up
+  // (local Y), and -forward (local Z).
+  Vec<T, 3> forward = (center - eye).normalized();
+  Vec<T, 3> right = forward.cross(world_up).normalized();
+  Vec<T, 3> up = right.cross(forward).normalized();
+
+  Mat<T, 4, 4> rotation;
+  rotation.set_col(0, Vec<T, 4>(right, 0.0));
+  rotation.set_col(1, Vec<T, 4>(up, 0.0));
+  rotation.set_col(2, Vec<T, 4>(-forward, 0.0));
+  rotation(3, 3) = 1.0;
+
+  Mat<T, 4, 4> translation = create_translation(-eye);
+
+  return rotation.transpose() * translation;
+}
+
+template <typename T>
+Mat<T, 4, 4> perspective(T aspect_ratio, T fov_y_rad, T near, T far) {
+  // Note: `near` and `far` are positive distances from the camera.
+  Mat<T, 4, 4> result = Mat<T, 4, 4>::identity();
+  T const f = 1.0 / std::tan(fov_y_rad / 2.0);
+  T const a_inv = 1.0 / aspect_ratio;
+  result(0, 0) = f * a_inv;
+  result(1, 1) = f;
+  result(2, 2) = (near + far) / (near - far);
+  result(3, 2) = -1.0;
+  result(2, 3) = 2.0 * near * far / (near - far);
+  result(3, 3) = 0.0;
+  return result;
+}
+
+template <typename T>
+Mat<T, 4, 4> orthographic(T left, T right, T bottom, T top, T near, T far) {
+  // Note: `left`, `right`, `bottom`, `top` are signed values, while `near` and
+  // `far` are positive distances.
+  Mat<T, 4, 4> result = Mat<T, 4, 4>::identity();
+  result(0, 0) = 2.0 / (right - left);
+  result(1, 1) = 2.0 / (top - bottom);
+  result(2, 2) = -2.0 / (far - near);
+  result(0, 3) = -(right + left) / (right - left);
+  result(1, 3) = -(top + bottom) / (top - bottom);
+  result(2, 3) = -(far + near) / (far - near);
   return result;
 }
 

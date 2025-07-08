@@ -185,6 +185,13 @@ class UnitQuat {
   UnitQuat operator*(const UnitQuat& other) const {
     return UnitQuat(q_ * other.q_);
   }
+
+  // 3. Static Factory Methods
+  static UnitQuat identity() { return UnitQuat(); }
+
+  static UnitQuat from_axis_angle(const Vec<T, 3>& axis, T angle_rad) {
+    return UnitQuat(axis, angle_rad);
+  }
 };
 
 // ===========================
