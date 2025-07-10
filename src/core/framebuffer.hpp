@@ -27,12 +27,17 @@ class FrameBuffer {
     }
   }
 
-  void set_pixel(uint32_t x, uint32_t y, const RGBA8& color, float depth) {
+  bool depth_test(uint32_t x, uint32_t y, float depth) const {
     if (x >= width_ || y >= height_) {
-      return;
+      return false;
     }
 
-    if (depth < depth_buffer_(x, y)) {
+    return depth < depth_buffer_(x, y);
+  }
+
+  void set_pixel(uint32_t x, uint32_t y, const RGBA8& color, float depth,
+                 bool test_depth = true) {
+    if (!test_depth || depth_test(x, y, depth)) {
       depth_buffer_(x, y) = depth;
       color_buffer_(x, y) = color;
     }

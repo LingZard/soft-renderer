@@ -13,6 +13,9 @@
 namespace soft_renderer {
 namespace math {
 
+template <typename T, uint32_t N>
+struct Vec;
+
 // ===========================
 // VecBase
 // ===========================
@@ -40,6 +43,12 @@ struct VecBase {
   VecBase(std::initializer_list<T> list) {
     assert(list.size() == N);
     std::copy(list.begin(), list.end(), data_);
+  }
+  template <typename OtherT>
+  explicit VecBase(const VecBase<OtherT, N, Derived>& other) {
+    for (uint32_t i = 0; i < N; ++i) {
+      data_[i] = static_cast<T>(other[i]);
+    }
   }
 
   // 3. Static Factory Methods
@@ -143,13 +152,22 @@ struct VecBase {
     return static_cast<Derived&>(*this);
   }
 
-  // 8. Comparison Operators
-  bool operator==(const Derived& other) const {
-    return this == &other || std::equal(data_, data_ + N, other.data_);
-  }
+  // 8. Comparison Operators (deprecated in C++20)
+  // bool operator==(const Derived& other) const {
+  //   return this == &other || std::equal(data_, data_ + N, other.data_);
+  // }
 
   // 9. Methods
   void fill(const T& value) { std::fill(data_, data_ + N, value); }
+
+  template <typename OtherT>
+  Vec<OtherT, N> cast() const {
+    Vec<OtherT, N> result;
+    for (uint32_t i = 0; i < N; ++i) {
+      result[i] = static_cast<OtherT>(data_[i]);
+    }
+    return result;
+  }
 
   T dot(const Derived& other) const {
     return std::inner_product(data_, data_ + N, other.data_, T{0});
@@ -190,6 +208,26 @@ struct VecBase {
     return os;
   }
 };
+
+template <typename T, uint32_t N, typename Derived>
+bool operator==(const VecBase<T, N, Derived>& lhs,
+                const VecBase<T, N, Derived>& rhs) {
+  if constexpr (std::is_floating_point_v<T>) {
+    for (uint32_t i = 0; i < N; ++i) {
+      if (std::abs(lhs[i] - rhs[i]) > VecBase<T, N, Derived>::epsilon()) {
+        return false;
+      }
+    }
+    return true;
+  } else {
+    for (uint32_t i = 0; i < N; ++i) {
+      if (lhs[i] != rhs[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+}
 
 // ===========================
 // Vec
@@ -234,6 +272,8 @@ struct Vec<T, 3> : public VecBase<T, 3, Vec<T, 3>> {
   Vec(const Vec<T, 2>& v, T z) : Base({v.x(), v.y(), z}) {}
   explicit Vec(const Vec<T, 4>& v) : Base({v.x(), v.y(), v.z()}) {}
 
+  Vec<T, 2> xy() const { return Vec<T, 2>{this->data_[0], this->data_[1]}; }
+
   T& x() { return this->data_[0]; }
   const T& x() const { return this->data_[0]; }
   T& y() { return this->data_[1]; }
@@ -262,6 +302,11 @@ struct Vec<T, 4> : public VecBase<T, 4, Vec<T, 4>> {
   // Conversion constructors
   Vec(const Vec<T, 3>& v, T w) : Base({v.x(), v.y(), v.z(), w}) {}
   explicit Vec(const Vec<T, 2>& v, T z, T w) : Base({v.x(), v.y(), z, w}) {}
+
+  Vec<T, 3> xyz() const {
+    return Vec<T, 3>{this->data_[0], this->data_[1], this->data_[2]};
+  }
+  Vec<T, 2> xy() const { return Vec<T, 2>{this->data_[0], this->data_[1]}; }
 
   T& x() { return this->data_[0]; }
   const T& x() const { return this->data_[0]; }
