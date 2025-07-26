@@ -66,6 +66,13 @@ struct Mat : public MatBase<Mat<T, M, N>> {
     std::copy(list.begin(), list.end(), cols_);
   }
 
+  template <typename OtherT>
+  explicit Mat(const Mat<OtherT, M, N>& other) {
+    for (uint32_t i = 0; i < N; ++i) {
+      cols_[i] = other[i].template cast<T>();
+    }
+  }
+
   // 3. Static Factory Methods
   static Self identity() {
     Self result;
