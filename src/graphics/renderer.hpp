@@ -1,10 +1,15 @@
 #pragma once
+#include <memory>
 #include <vector>
 
 #include "../core/framebuffer.hpp"
 #include "../core/primitive.hpp"
 #include "../core/vertex.hpp"
+#include "clipping.hpp"
+#include "concepts.hpp"
+#include "rasterizer.hpp"
 #include "shader.hpp"
+#include "viewport.hpp"
 
 namespace soft_renderer {
 namespace graphics {
@@ -18,11 +23,24 @@ class Renderer {
   using Uniforms = typename TShader::Uniforms;
 
   Renderer(FrameBuffer& fb, const TShader& shader)
-      : framebuffer_(fb), shader_(shader) {}
+      : framebuffer_(fb), shader_(shader) {
+    line_clipper_ =
+        create_line_clipper<Varyings>(LineClipAlgorithm::LiangBarsky);
+    triangle_clipper_ = create_triangle_clipper<Varyings>(
+        TriangleClipAlgorithm::SutherlandHodgman);
+  }
 
   void draw(const std::vector<Vertex>& vertices,
             const std::vector<uint32_t>& indices, const Uniforms& uniforms,
             PrimitiveTopology topology) {
+    ViewportTransform fullscreen_viewport(framebuffer_.width(),
+                                          framebuffer_.height());
+    draw(vertices, indices, uniforms, topology, fullscreen_viewport);
+  }
+
+  void draw(const std::vector<Vertex>& vertices,
+            const std::vector<uint32_t>& indices, const Uniforms& uniforms,
+            PrimitiveTopology topology, const ViewportTransform& viewport) {
     // Vertex Processing
     std::vector<Varyings> varyings;
     varyings.reserve(vertices.size());
@@ -33,11 +51,13 @@ class Renderer {
     // Primitive Assembly & Rasterization & fragment processing
     switch (topology) {
       case PrimitiveTopology::Points:
-        process_points(varyings, indices, uniforms);
+        process_points(varyings, indices, uniforms, viewport);
         break;
       case PrimitiveTopology::Lines:
+        process_lines(varyings, indices, uniforms, viewport);
         break;
       case PrimitiveTopology::Triangles:
+        process_triangles(varyings, indices, uniforms, viewport);
         break;
     }
   }
@@ -45,10 +65,14 @@ class Renderer {
  private:
   FrameBuffer& framebuffer_;
   const TShader& shader_;
+  std::unique_ptr<ILineClipper<Varyings>> line_clipper_;
+  std::unique_ptr<ITriangleClipper<Varyings>> triangle_clipper_;
+  Rasterizer<TShader> rasterizer_;
 
   void process_points(const std::vector<Varyings>& varyings,
                       const std::vector<uint32_t>& indices,
-                      const Uniforms& uniforms) {
+                      const Uniforms& uniforms,
+                      const ViewportTransform& viewport) {
     for (const auto& index : indices) {
       const auto& vary = varyings[index];
       // TODO: clipping
@@ -57,76 +81,117 @@ class Renderer {
       float inv_w = 1.0f / vary.clip_pos.w();
       Vec3f ndc = vary.clip_pos.xyz() * inv_w;
 
-      int screen_x = (ndc.x() + 1.0f) * 0.5f * framebuffer_.width();
-      int screen_y = (ndc.y() + 1.0f) * 0.5f * framebuffer_.height();
-      float depth = (ndc.z() + 1.0f) * 0.5f;
+      ScreenCoord screen_coord = viewport.ndc_to_screen(ndc);
 
-      if (framebuffer_.depth_test(screen_x, screen_y, depth)) {
+      if (framebuffer_.depth_test(screen_coord.x, screen_coord.y,
+                                  screen_coord.depth)) {
         Color final_color = shader_.fragment(vary, uniforms);
         RGBA8 color = to_rgba8(final_color);
-        framebuffer_.set_pixel(screen_x, screen_y, color, depth, false);
+        framebuffer_.set_pixel(screen_coord.x, screen_coord.y, color,
+                               screen_coord.depth, false);
       }
     }
   }
 
   void process_lines(const std::vector<Varyings>& varyings,
                      const std::vector<uint32_t>& indices,
-                     const Uniforms& uniforms) {
+                     const Uniforms& uniforms,
+                     const ViewportTransform& viewport) {
     for (size_t i = 0; i < indices.size(); i += 2) {
       const auto& v0 = varyings[indices[i]];
       const auto& v1 = varyings[indices[i + 1]];
 
-      // TODO: 1. Line Clipping
-      // Clip the line segment against the view frustum.
-      // This is complex, may produce 0 or 1 new lines. E.g., using
-      // Liang-Barsky.
+      // 1. Line Clipping
+      std::optional<std::pair<Varyings, Varyings>> clipped_lines =
+          line_clipper_->clip(v0, v1);
+      if (!clipped_lines) {
+        continue;
+      }
 
-      // TODO: 2. Perspective Divide & Viewport Transform for both vertices.
+      const auto& [clipped_v0, clipped_v1] = clipped_lines.value();
 
-      // TODO: 3. Line Rasterization
-      // Use an algorithm like Bresenham's to find all pixels between the two
-      // endpoints. For each pixel (x, y) on the line:
-      //   a. Interpolate attributes from v0 and v1 for the current pixel.
-      //      This requires perspective-correct interpolation.
-      //      - Calculate an interpolation factor `t`.
-      //      - Interpolate `1/w` and `attribute/w`.
-      //      - Final attribute = (interpolated attribute/w) / (interpolated
-      //      1/w).
-      //   b. Perform depth test with the interpolated depth.
-      //   c. If the test passes, call fragment shader and write to framebuffer.
+      // 2. Perform perspective division and viewport transformation explicitly
+      //    in the renderer.
+      float inv_w0 = 1.0f / clipped_v0.clip_pos.w();
+      Vec3f ndc0 = clipped_v0.clip_pos.xyz() * inv_w0;
+      Fragment<TShader> sv0 = {viewport.ndc_to_screen(ndc0), clipped_v0};
+
+      float inv_w1 = 1.0f / clipped_v1.clip_pos.w();
+      Vec3f ndc1 = clipped_v1.clip_pos.xyz() * inv_w1;
+      Fragment<TShader> sv1 = {viewport.ndc_to_screen(ndc1), clipped_v1};
+
+      // 3. Hand over to rasterizer with a fragment processing lambda
+      rasterizer_.rasterize_line(sv0, sv1, [&](const Fragment<TShader>& frag) {
+        Color final_color = shader_.fragment(frag.varyings, uniforms);
+        RGBA8 color = to_rgba8(final_color);
+        framebuffer_.set_pixel(frag.screen_pos.x, frag.screen_pos.y, color,
+                               frag.screen_pos.depth);
+      });
     }
   }
 
   void process_triangles(const std::vector<Varyings>& varyings,
                          const std::vector<uint32_t>& indices,
-                         const Uniforms& uniforms) {
+                         const Uniforms& uniforms,
+                         const ViewportTransform& viewport) {
     for (size_t i = 0; i < indices.size(); i += 3) {
       const auto& v0 = varyings[indices[i]];
       const auto& v1 = varyings[indices[i + 1]];
       const auto& v2 = varyings[indices[i + 2]];
 
-      // TODO: 1. Back-face Culling (Optional optimization)
-      // Determine triangle orientation in screen space. If it's a back-face,
-      // discard it. e.g., by checking the sign of the cross product of two
-      // edges.
+      // 1. Back-face Culling (Optional optimization)
+      // To perform back-face culling, we project the vertices to screen space
+      // and check the winding order.
+      Vec3f ndc0 = v0.clip_pos.xyz() * (1.0f / v0.clip_pos.w());
+      ScreenCoord sc0 = viewport.ndc_to_screen(ndc0);
+      Vec3f ndc1 = v1.clip_pos.xyz() * (1.0f / v1.clip_pos.w());
+      ScreenCoord sc1 = viewport.ndc_to_screen(ndc1);
+      Vec3f ndc2 = v2.clip_pos.xyz() * (1.0f / v2.clip_pos.w());
+      ScreenCoord sc2 = viewport.ndc_to_screen(ndc2);
 
-      // TODO: 2. Triangle Clipping
-      // Clip the triangle against the view frustum. This is the most complex
-      // part. A clipped triangle can become a polygon of 3 to 7 vertices. This
-      // polygon must then be re-triangulated.
+      float signed_area =
+          (sc1.x - sc0.x) * (sc2.y - sc0.y) - (sc2.x - sc0.x) * (sc1.y - sc0.y);
+      if (signed_area < 0) {
+        continue;
+      }
 
-      // TODO: 3. Perspective Divide & Viewport Transform for all 3 vertices.
+      // 2. Triangle Clipping
+      std::vector<Varyings> clipped_vertices =
+          triangle_clipper_->clip(v0, v1, v2);
+      if (clipped_vertices.size() < 3) {
+        continue;
+      }
 
-      // TODO: 4. Triangle Rasterization
-      //   a. Compute a 2D bounding box for the triangle on the screen.
-      //   b. Loop through each pixel (x, y) within the bounding box.
-      //   c. Calculate barycentric coordinates (alpha, beta, gamma) for the
-      //   pixel. d. If the pixel is inside the triangle (coordinates are all
-      //   non-negative):
-      //      i. Perform perspective-correct interpolation of attributes using
-      //      the barycentric coordinates. ii. Perform depth test using the
-      //      interpolated depth. iii. If the test passes, call fragment shader
-      //      and write to framebuffer.
+      // 3. Re-triangulate, transform, and rasterize
+      const auto& anchor = clipped_vertices[0];
+      float inv_w_anchor = 1.0f / anchor.clip_pos.w();
+      Vec3f ndc_anchor = anchor.clip_pos.xyz() * inv_w_anchor;
+      Fragment<TShader> sv_anchor = {viewport.ndc_to_screen(ndc_anchor),
+                                     anchor};
+
+      for (size_t i = 1; i < clipped_vertices.size() - 1; ++i) {
+        const auto& p1 = clipped_vertices[i];
+        const auto& p2 = clipped_vertices[i + 1];
+
+        float inv_w1 = 1.0f / p1.clip_pos.w();
+        Vec3f ndc1 = p1.clip_pos.xyz() * inv_w1;
+        Fragment<TShader> sv1 = {viewport.ndc_to_screen(ndc1), p1};
+
+        float inv_w2 = 1.0f / p2.clip_pos.w();
+        Vec3f ndc2 = p2.clip_pos.xyz() * inv_w2;
+        Fragment<TShader> sv2 = {viewport.ndc_to_screen(ndc2), p2};
+
+        rasterizer_.rasterize_triangle(
+            sv_anchor, sv1, sv2, [&](const Fragment<TShader>& frag) {
+              Color final_color = shader_.fragment(frag.varyings, uniforms);
+              RGBA8 color = to_rgba8(final_color);
+              if (framebuffer_.depth_test(frag.screen_pos.x, frag.screen_pos.y,
+                                          frag.screen_pos.depth)) {
+                framebuffer_.set_pixel(frag.screen_pos.x, frag.screen_pos.y,
+                                       color, frag.screen_pos.depth, false);
+              }
+            });
+      }
     }
   }
 };

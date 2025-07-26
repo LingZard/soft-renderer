@@ -48,5 +48,33 @@ class Viewport {
   }
 };
 
+struct ScreenCoord {
+  int x;
+  int y;
+  float depth;
+};
+
+class ViewportTransform {
+ public:
+  ViewportTransform(uint32_t x, uint32_t y, uint32_t width, uint32_t height)
+      : x_(x), y_(y), width_(width), height_(height) {}
+
+  ViewportTransform(uint32_t width, uint32_t height)
+      : x_(0), y_(0), width_(width), height_(height) {}
+
+  ScreenCoord ndc_to_screen(const Vec3f& ndc) const {
+    int screen_x = x_ + (ndc.x() + 1.0f) * 0.5f * width_;
+    int screen_y = y_ + (ndc.y() + 1.0f) * 0.5f * height_;
+    float depth = (ndc.z() + 1.0f) * 0.5f;
+    return {screen_x, screen_y, depth};
+  }
+
+ private:
+  uint32_t x_;
+  uint32_t y_;
+  uint32_t width_;
+  uint32_t height_;
+};
+
 }  // namespace graphics
 }  // namespace soft_renderer

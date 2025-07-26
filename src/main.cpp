@@ -42,6 +42,96 @@ std::vector<Vertex> create_torus_point_cloud(int num_points, float R, float r) {
   return vertices;
 }
 
+// Generates vertices and line indices for a sphere.
+std::pair<std::vector<Vertex>, std::vector<uint32_t>> create_sphere(
+    int segments, int rings) {
+  std::vector<Vertex> vertices;
+  std::vector<uint32_t> indices;
+
+  // Generate vertices
+  for (int i = 0; i <= rings; ++i) {
+    float v = static_cast<float>(i) / rings;
+    float phi = v * M_PI;
+    for (int j = 0; j <= segments; ++j) {
+      float u = static_cast<float>(j) / segments;
+      float theta = u * 2.0f * M_PI;
+
+      float x = cos(theta) * sin(phi);
+      float y = cos(phi);
+      float z = sin(theta) * sin(phi);
+
+      vertices.push_back(
+          {.position = {x, y, z, 1.0f}, .color = {u, v, 1.0f - u, 1.0f}});
+    }
+  }
+
+  // Generate indices for lines
+  for (int i = 0; i < rings; ++i) {
+    for (int j = 0; j < segments; ++j) {
+      uint32_t current = i * (segments + 1) + j;
+      uint32_t next_j = i * (segments + 1) + (j + 1);
+      uint32_t next_i = (i + 1) * (segments + 1) + j;
+      uint32_t next_ij = (i + 1) * (segments + 1) + (j + 1);
+
+      // Ring lines
+      indices.push_back(current);
+      indices.push_back(next_j);
+
+      // Segment lines
+      indices.push_back(current);
+      indices.push_back(next_i);
+    }
+  }
+
+  return {vertices, indices};
+}
+
+// Generates vertices and triangle indices for a sphere.
+std::pair<std::vector<Vertex>, std::vector<uint32_t>> create_sphere_triangles(
+    int segments, int rings) {
+  std::vector<Vertex> vertices;
+  std::vector<uint32_t> indices;
+
+  // Generate vertices
+  for (int i = 0; i <= rings; ++i) {
+    float v = static_cast<float>(i) / rings;
+    float phi = v * M_PI;
+    for (int j = 0; j <= segments; ++j) {
+      float u = static_cast<float>(j) / segments;
+      float theta = u * 2.0f * M_PI;
+
+      float x = cos(theta) * sin(phi);
+      float y = cos(phi);
+      float z = sin(theta) * sin(phi);
+
+      vertices.push_back(
+          {.position = {x, y, z, 1.0f}, .color = {u, v, 1.0f - u, 1.0f}});
+    }
+  }
+
+  // Generate indices for triangles
+  for (int i = 0; i < rings; ++i) {
+    for (int j = 0; j < segments; ++j) {
+      uint32_t current = i * (segments + 1) + j;
+      uint32_t next_j = i * (segments + 1) + (j + 1);
+      uint32_t next_i = (i + 1) * (segments + 1) + j;
+      uint32_t next_ij = (i + 1) * (segments + 1) + (j + 1);
+
+      // First triangle
+      indices.push_back(current);
+      indices.push_back(next_i);
+      indices.push_back(next_j);
+
+      // Second triangle
+      indices.push_back(next_j);
+      indices.push_back(next_i);
+      indices.push_back(next_ij);
+    }
+  }
+
+  return {vertices, indices};
+}
+
 void render_point_cloud_animation() {
   // 1. Setup scene
   const int width = 800;
@@ -49,6 +139,7 @@ void render_point_cloud_animation() {
   FrameBuffer framebuffer(width, height);
   FlatShader shader;
   Renderer<FlatShader> renderer(framebuffer, shader);
+  ViewportTransform viewport(width, height);
 
   // 2. Create the point cloud geometry
   const int num_points = 10000;
@@ -77,7 +168,8 @@ void render_point_cloud_animation() {
 
     // b. Render the scene
     framebuffer.clear({0, 0, 0, 255});
-    renderer.draw(vertices, indices, uniforms, PrimitiveTopology::Points);
+    renderer.draw(vertices, indices, uniforms, PrimitiveTopology::Points,
+                  viewport);
 
     // c. Save output file
     std::string filename = std::format("point_cloud_{:02d}.tga", i);
@@ -89,7 +181,95 @@ void render_point_cloud_animation() {
   }
 }
 
+void render_wireframe_animation() {
+  // 1. Setup scene
+  const int width = 800;
+  const int height = 600;
+  FrameBuffer framebuffer(width, height);
+  FlatShader shader;
+  Renderer<FlatShader> renderer(framebuffer, shader);
+  ViewportTransform viewport(width, height);
+
+  // 2. Create sphere geometry for wireframe rendering
+  auto [vertices, indices] = create_sphere(32, 16);
+
+  // 3. Setup view and projection matrices
+  UnitQuatd look_at_origin_rot(Vec3d(1.0, 0.0, 0.0), M_PI * 3 / 4);
+  PerspectiveCamera camera(Vec3d(0, 0.4, 0.4), look_at_origin_rot, M_PI / 2.0);
+  Mat4f view = Mat4f(camera.get_view_matrix());
+  Mat4f projection = Mat4f(camera.get_projection_matrix(
+      static_cast<float>(width) / height, 0.1f, 100.0f));
+
+  // 4. Render 24 frames of a 360-degree rotation
+  const int num_frames = 24;
+  for (int i = 0; i < num_frames; ++i) {
+    float angle_rad = static_cast<float>(i) / num_frames * 2.0f * M_PI;
+
+    // a. Update model matrix
+    Mat4f model = create_rotation(Vec3f(0.0f, 1.0f, 0.0f), angle_rad);
+    Mat4f mvp = projection * view * model;
+    FlatShader::Uniforms uniforms{.mvp = mvp};
+
+    // b. Render the scene as lines
+    framebuffer.clear({20, 20, 20, 255});
+    renderer.draw(vertices, indices, uniforms, PrimitiveTopology::Lines,
+                  viewport);
+
+    // c. Save output file
+    std::string filename = std::format("wireframe_{:02d}.tga", i);
+    if (write_tga_image(filename, framebuffer.color_buffer())) {
+      std::cout << "Rendered frame " << i << " to " << filename << std::endl;
+    } else {
+      std::cerr << "Failed to write " << filename << std::endl;
+    }
+  }
+}
+
+void render_triangles_animation() {
+  // 1. Setup scene
+  const int width = 800;
+  const int height = 600;
+  FrameBuffer framebuffer(width, height);
+  FlatShader shader;
+  Renderer<FlatShader> renderer(framebuffer, shader);
+  ViewportTransform viewport(width, height);
+
+  // 2. Create sphere geometry
+  auto [vertices, indices] = create_sphere_triangles(32, 16);
+
+  // 3. Setup view and projection matrices
+  UnitQuatd look_at_origin_rot(Vec3d(1.0, 0.0, 0.0), M_PI * 3 / 4);
+  PerspectiveCamera camera(Vec3d(0, 1, 2), look_at_origin_rot, M_PI / 2.0);
+  Mat4f view = Mat4f(camera.get_view_matrix());
+  Mat4f projection = Mat4f(camera.get_projection_matrix(
+      static_cast<float>(width) / height, 0.1f, 100.0f));
+
+  // 4. Render 24 frames of a 360-degree rotation
+  const int num_frames = 24;
+  for (int i = 0; i < num_frames; ++i) {
+    float angle_rad = static_cast<float>(i) / num_frames * 2.0f * M_PI;
+
+    // a. Update model matrix
+    Mat4f model = create_rotation(Vec3f(0.0f, 1.0f, 0.0f), angle_rad);
+    Mat4f mvp = projection * view * model;
+    FlatShader::Uniforms uniforms{.mvp = mvp};
+
+    // b. Render the scene as triangles
+    framebuffer.clear({20, 20, 20, 255});
+    renderer.draw(vertices, indices, uniforms, PrimitiveTopology::Triangles,
+                  viewport);
+
+    // c. Save output file
+    std::string filename = std::format("triangles_{:02d}.tga", i);
+    if (write_tga_image(filename, framebuffer.color_buffer())) {
+      std::cout << "Rendered frame " << i << " to " << filename << std::endl;
+    } else {
+      std::cerr << "Failed to write " << filename << std::endl;
+    }
+  }
+}
+
 int main(int argc, char** argv) {
-  render_point_cloud_animation();
+  render_triangles_animation();
   return 0;
 }

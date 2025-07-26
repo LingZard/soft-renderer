@@ -256,6 +256,10 @@ struct Vec<T, 2> : public VecBase<T, 2, Vec<T, 2>> {
   const T& x() const { return this->data_[0]; }
   T& y() { return this->data_[1]; }
   const T& y() const { return this->data_[1]; }
+
+  T cross(const Vec& other) const {
+    return this->data_[0] * other.data_[1] - this->data_[1] * other.data_[0];
+  }
 };
 
 // ===========================
