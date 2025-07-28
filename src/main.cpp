@@ -8,7 +8,6 @@
 
 #include "core/framebuffer.hpp"
 #include "core/primitive.hpp"
-#include "core/vertex.hpp"
 #include "graphics/camera.hpp"
 #include "graphics/renderer.hpp"
 #include "graphics/shader.hpp"
@@ -60,7 +59,64 @@ void mouse_move_callback(struct mfb_window* window, int x, int y) {
   }
 }
 
-// Generates a point cloud in the shape of a torus.
+template <Shader TShader>
+void run_interactive_viewer(
+    const std::vector<typename TShader::Vertex>& vertices,
+    const std::vector<uint32_t>& indices, PrimitiveTopology topology,
+    PerspectiveCamera& camera) {
+  const int width = 800;
+  const int height = 600;
+
+  // 1. Setup window
+  struct mfb_window* window =
+      mfb_open_ex("Soft Renderer", width, height, WF_RESIZABLE);
+  if (!window) {
+    return;
+  }
+  mfb_set_mouse_button_callback(window, mouse_button_callback);
+  mfb_set_mouse_move_callback(window, mouse_move_callback);
+
+  // 2. Setup scene
+  FrameBuffer framebuffer(width, height);
+  FlatShader shader;
+  Renderer<FlatShader> renderer(framebuffer, shader);
+  ViewportTransform viewport(width, height);
+  g_camera_ptr = &camera;
+
+  // 3. Setup projection and model matrices (they don't change)
+  Mat4f projection = Mat4f(camera.get_projection_matrix(
+      static_cast<float>(width) / height, 0.1f, 100.0f));
+  Mat4f model = Mat4f::identity();
+
+  // 4. Main loop
+  do {
+    // a. Update view matrix from camera (controlled by mouse)
+    Mat4f view = Mat4f(camera.get_view_matrix());
+    Mat4f mvp = projection * view * model;
+    FlatShader::Uniforms uniforms{.mvp = mvp};
+
+    // b. Render the scene
+    framebuffer.clear({20, 20, 20, 255});
+    renderer.draw(vertices, indices, uniforms, topology, viewport);
+
+    // c. Update window
+    int state = mfb_update_ex(window,
+                              reinterpret_cast<void*>(const_cast<core::RGBA8*>(
+                                  framebuffer.color_buffer().data())),
+                              width, height);
+    if (state < 0) {
+      break;
+    }
+  } while (mfb_wait_sync(window));
+
+  mfb_close(window);
+  g_camera_ptr = nullptr;
+}
+
+namespace flat_shader {
+using Vertex = FlatShader::Vertex;
+
+// Generates vertices for a torus point cloud.
 std::vector<Vertex> create_torus_point_cloud(int num_points, float R, float r) {
   std::vector<Vertex> vertices;
   vertices.reserve(num_points);
@@ -174,59 +230,6 @@ std::pair<std::vector<Vertex>, std::vector<uint32_t>> create_sphere_triangles(
   return {vertices, indices};
 }
 
-void run_interactive_viewer(const std::vector<Vertex>& vertices,
-                            const std::vector<uint32_t>& indices,
-                            PrimitiveTopology topology,
-                            PerspectiveCamera& camera) {
-  const int width = 800;
-  const int height = 600;
-
-  // 1. Setup window
-  struct mfb_window* window =
-      mfb_open_ex("Soft Renderer", width, height, WF_RESIZABLE);
-  if (!window) {
-    return;
-  }
-  mfb_set_mouse_button_callback(window, mouse_button_callback);
-  mfb_set_mouse_move_callback(window, mouse_move_callback);
-
-  // 2. Setup scene
-  FrameBuffer framebuffer(width, height);
-  FlatShader shader;
-  Renderer<FlatShader> renderer(framebuffer, shader);
-  ViewportTransform viewport(width, height);
-  g_camera_ptr = &camera;
-
-  // 3. Setup projection and model matrices (they don't change)
-  Mat4f projection = Mat4f(camera.get_projection_matrix(
-      static_cast<float>(width) / height, 0.1f, 100.0f));
-  Mat4f model = Mat4f::identity();
-
-  // 4. Main loop
-  do {
-    // a. Update view matrix from camera (controlled by mouse)
-    Mat4f view = Mat4f(camera.get_view_matrix());
-    Mat4f mvp = projection * view * model;
-    FlatShader::Uniforms uniforms{.mvp = mvp};
-
-    // b. Render the scene
-    framebuffer.clear({20, 20, 20, 255});
-    renderer.draw(vertices, indices, uniforms, topology, viewport);
-
-    // c. Update window
-    int state = mfb_update_ex(window,
-                              reinterpret_cast<void*>(const_cast<core::RGBA8*>(
-                                  framebuffer.color_buffer().data())),
-                              width, height);
-    if (state < 0) {
-      break;
-    }
-  } while (mfb_wait_sync(window));
-
-  mfb_close(window);
-  g_camera_ptr = nullptr;
-}
-
 void show_point_cloud() {
   const int num_points = 10000;
   auto vertices = create_torus_point_cloud(num_points, 1.5f, 0.5f);
@@ -236,7 +239,8 @@ void show_point_cloud() {
   UnitQuatd look_at_origin_rot(Vec3d(1.0, 0.0, 0.0), M_PI * 3.0 / 4.0);
   PerspectiveCamera camera(Vec3d(0, 3, 3), look_at_origin_rot, M_PI / 2.0);
 
-  run_interactive_viewer(vertices, indices, PrimitiveTopology::Points, camera);
+  run_interactive_viewer<FlatShader>(vertices, indices,
+                                     PrimitiveTopology::Points, camera);
 }
 
 void show_wireframe_sphere() {
@@ -245,7 +249,8 @@ void show_wireframe_sphere() {
   UnitQuatd look_at_origin_rot(Vec3d(1.0, 0.0, 0.0), M_PI * 3.0 / 4.0);
   PerspectiveCamera camera(Vec3d(0, 0.4, 0.4), look_at_origin_rot, M_PI / 2.0);
 
-  run_interactive_viewer(vertices, indices, PrimitiveTopology::Lines, camera);
+  run_interactive_viewer<FlatShader>(vertices, indices,
+                                     PrimitiveTopology::Lines, camera);
 }
 
 void show_triangle_sphere() {
@@ -254,12 +259,13 @@ void show_triangle_sphere() {
   UnitQuatd look_at_origin_rot(Vec3d(1.0, 0.0, 0.0), M_PI * 3.0 / 4.0);
   PerspectiveCamera camera(Vec3d(0, 1, 2), look_at_origin_rot, M_PI / 2.0);
 
-  run_interactive_viewer(vertices, indices, PrimitiveTopology::Triangles,
-                         camera);
+  run_interactive_viewer<FlatShader>(vertices, indices,
+                                     PrimitiveTopology::Triangles, camera);
 }
+}  // namespace flat_shader
 
 int main(int argc, char** argv) {
-  show_triangle_sphere();
+  flat_shader::show_triangle_sphere();
   // show_wireframe_sphere();
   // show_point_cloud();
   return 0;

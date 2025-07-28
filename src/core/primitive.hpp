@@ -1,5 +1,4 @@
 #pragma once
-#include "vertex.hpp"
 
 namespace soft_renderer {
 namespace core {

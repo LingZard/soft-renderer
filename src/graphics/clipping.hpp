@@ -5,9 +5,8 @@
 #include <optional>
 #include <vector>
 
-#include "../core/vertex.hpp"
 #include "../math/vec.hpp"
-#include "concepts.hpp"
+#include "pipeline_types.hpp"
 
 namespace soft_renderer {
 namespace graphics {

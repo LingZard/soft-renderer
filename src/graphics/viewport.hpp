@@ -1,6 +1,7 @@
 #pragma once
 
 #include "camera.hpp"
+#include "pipeline_types.hpp"
 
 namespace soft_renderer {
 namespace graphics {
@@ -43,12 +44,6 @@ class Viewport {
         static_cast<double>(width) / static_cast<double>(height);
     return camera->get_projection_matrix(aspect_ratio, near_plane, far_plane);
   }
-};
-
-struct ScreenCoord {
-  int x;
-  int y;
-  float depth;
 };
 
 class ViewportTransform {

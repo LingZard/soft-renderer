@@ -4,11 +4,9 @@
 
 #include "../core/framebuffer.hpp"
 #include "../core/primitive.hpp"
-#include "../core/vertex.hpp"
 #include "clipping.hpp"
-#include "concepts.hpp"
+#include "pipeline_types.hpp"
 #include "rasterizer.hpp"
-#include "shader.hpp"
 #include "viewport.hpp"
 
 namespace soft_renderer {
@@ -19,6 +17,7 @@ using namespace soft_renderer::core;
 template <Shader TShader>
 class Renderer {
  public:
+  using Vertex = typename TShader::Vertex;
   using Varyings = typename TShader::Varyings;
   using Uniforms = typename TShader::Uniforms;
 
