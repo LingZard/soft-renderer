@@ -80,6 +80,8 @@ class Camera {
   void set_controller(std::unique_ptr<ICameraController> controller);
 
   void handle_input(double delta_time, const UserInput& input);
+
+  void rotate(const UnitQuatd& q) { orientation_ = q * orientation_; }
 };
 
 class PerspectiveCamera : public Camera {

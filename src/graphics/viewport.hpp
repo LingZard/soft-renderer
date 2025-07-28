@@ -9,14 +9,11 @@ namespace graphics {
 // operation. It does not own the camera.
 class Viewport {
  public:
-  // Pointer to the camera to use (does not own it).
   Camera* camera;
 
-  // Render target dimensions.
   int width;
   int height;
 
-  // Frustum planes.
   double near_plane;
   double far_plane;
 
