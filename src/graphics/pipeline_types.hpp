@@ -1,6 +1,6 @@
 #pragma once
 #include "../core/color.hpp"
-#include "../math/vec.hpp"
+#include "../core/math/vec.hpp"
 
 namespace soft_renderer {
 namespace graphics {

@@ -5,7 +5,7 @@
 #include <optional>
 #include <vector>
 
-#include "../math/vec.hpp"
+#include "../core/math/vec.hpp"
 #include "pipeline_types.hpp"
 
 namespace soft_renderer {

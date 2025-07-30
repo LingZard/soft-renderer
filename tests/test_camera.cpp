@@ -1,8 +1,8 @@
 #define CATCH_CONFIG_MAIN
 #include <catch2/catch_all.hpp>
 
+#include "../src/core/math/mat.hpp"
 #include "../src/graphics/camera.hpp"
-#include "../src/math/mat.hpp"
 
 using namespace soft_renderer::graphics;
 using namespace soft_renderer::math;

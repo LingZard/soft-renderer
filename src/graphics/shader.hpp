@@ -3,8 +3,8 @@
 #include <concepts>
 
 #include "../core/color.hpp"
-#include "../math/mat.hpp"
-#include "../math/vec.hpp"
+#include "../core/math/mat.hpp"
+#include "../core/math/vec.hpp"
 
 namespace soft_renderer {
 namespace graphics {

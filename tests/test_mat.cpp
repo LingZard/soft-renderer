@@ -2,7 +2,7 @@
 #include <catch2/catch_all.hpp>
 #include <type_traits>
 
-#include "../src/math/mat.hpp"
+#include "../src/core/math/mat.hpp"
 
 using namespace soft_renderer::math;
 

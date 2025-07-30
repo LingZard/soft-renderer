@@ -3,10 +3,10 @@
 #include <cmath>
 #include <memory>
 
+#include "../core/math/mat.hpp"
+#include "../core/math/quat.hpp"
+#include "../core/math/vec.hpp"
 #include "../input/user_input.hpp"
-#include "../math/mat.hpp"
-#include "../math/quat.hpp"
-#include "../math/vec.hpp"
 
 namespace soft_renderer {
 namespace graphics {

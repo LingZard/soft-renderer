@@ -7,13 +7,13 @@
 #include <vector>
 
 #include "core/framebuffer.hpp"
+#include "core/math/mat.hpp"
+#include "core/math/vec.hpp"
 #include "core/primitive.hpp"
 #include "graphics/camera.hpp"
 #include "graphics/renderer.hpp"
 #include "graphics/shader.hpp"
 #include "io/tga_image.hpp"
-#include "math/mat.hpp"
-#include "math/vec.hpp"
 
 using namespace soft_renderer;
 using namespace soft_renderer::core;
