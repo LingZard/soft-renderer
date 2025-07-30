@@ -2,7 +2,7 @@
 #include <catch2/catch_all.hpp>
 #include <type_traits>
 
-#include "../src/math/mat.hpp"
+#include "soft_renderer/core.hpp"
 
 using namespace soft_renderer::math;
 
@@ -318,7 +318,7 @@ TEST_CASE("Mat minor", "[mat-minor]") {
   REQUIRE(minor_11(1, 1) == 9.0f);
 }
 
-TEST_CASE("Graphics transformation matrices", "[mat-graphics]") {
+TEST_CASE("Graphics transformation matrices", "[mat-renderer]") {
   SECTION("perspective matrix correctness") {
     double aspect = 16.0 / 9.0;
     double fov_y_rad = M_PI / 2.0;  // 90 degrees

@@ -3,22 +3,22 @@
 #include <vector>
 
 #include "../core/framebuffer.hpp"
-#include "../core/primitive.hpp"
-#include "../core/vertex.hpp"
+#include "../scene/primitive.hpp"
 #include "clipping.hpp"
-#include "concepts.hpp"
+#include "pipeline_types.hpp"
 #include "rasterizer.hpp"
-#include "shader.hpp"
 #include "viewport.hpp"
 
 namespace soft_renderer {
-namespace graphics {
+namespace renderer {
 
 using namespace soft_renderer::core;
+using namespace soft_renderer::scene;
 
 template <Shader TShader>
 class Renderer {
  public:
+  using Vertex = typename TShader::Vertex;
   using Varyings = typename TShader::Varyings;
   using Uniforms = typename TShader::Uniforms;
 
@@ -196,5 +196,5 @@ class Renderer {
   }
 };
 
-}  // namespace graphics
+}  // namespace renderer
 }  // namespace soft_renderer

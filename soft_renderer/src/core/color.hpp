@@ -3,7 +3,7 @@
 #include <cmath>
 #include <cstdint>
 
-#include "../math/vec.hpp"
+#include "math/vec.hpp"
 
 namespace soft_renderer {
 namespace core {

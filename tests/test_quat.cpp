@@ -3,7 +3,7 @@
 #include <cmath>
 #include <type_traits>
 
-#include "../src/math/quat.hpp"
+#include "soft_renderer/core.hpp"
 
 using namespace soft_renderer::math;
 

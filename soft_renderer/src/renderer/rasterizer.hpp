@@ -3,19 +3,13 @@
 #include <vector>
 
 #include "../core/framebuffer.hpp"
-#include "concepts.hpp"
+#include "pipeline_types.hpp"
 #include "viewport.hpp"
 
 namespace soft_renderer {
-namespace graphics {
+namespace renderer {
 
 using namespace soft_renderer::core;
-
-template <Shader TShader>
-struct Fragment {
-  ScreenCoord screen_pos;
-  typename TShader::Varyings varyings;
-};
 
 template <Shader TShader>
 class Rasterizer {
@@ -144,5 +138,5 @@ class Rasterizer {
   }
 };
 
-}  // namespace graphics
+}  // namespace renderer
 }  // namespace soft_renderer

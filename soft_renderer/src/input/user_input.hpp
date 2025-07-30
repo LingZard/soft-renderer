@@ -2,7 +2,7 @@
 
 #include <unordered_set>
 
-#include "../math/vec.hpp"
+#include "../core/math/vec.hpp"
 
 namespace soft_renderer {
 namespace input {

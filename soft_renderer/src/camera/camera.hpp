@@ -3,16 +3,14 @@
 #include <cmath>
 #include <memory>
 
-#include "../input/user_input.hpp"
-#include "../math/mat.hpp"
-#include "../math/quat.hpp"
-#include "../math/vec.hpp"
+#include "../core/math/mat.hpp"
+#include "../core/math/quat.hpp"
+#include "../core/math/vec.hpp"
 
 namespace soft_renderer {
-namespace graphics {
+namespace camera {
 
 using namespace soft_renderer::math;
-using namespace soft_renderer::input;
 
 const Vec3d kWorldUp = Vec3d(0.0, 1.0, 0.0);
 
@@ -30,14 +28,14 @@ const Vec3d kWorldUp = Vec3d(0.0, 1.0, 0.0);
 //   - Z-axis points inwards (into the screen)
 //   - Y-axis points upwards
 //   - X-axis points to the right
-// This is done to maintain compatibility with typical graphics pipelines.
+// This is done to maintain compatibility with typical renderer pipelines.
 class Camera;
 
 class ICameraController {
  public:
   virtual ~ICameraController() = default;
-  virtual void update(Camera& camera, double delta_time,
-                      const UserInput& input) = 0;
+  // virtual void update(Camera& camera, double delta_time,
+  //                     const UserInput& input) = 0;
 };
 
 class Camera {
@@ -79,7 +77,9 @@ class Camera {
 
   void set_controller(std::unique_ptr<ICameraController> controller);
 
-  void handle_input(double delta_time, const UserInput& input);
+  // void handle_input(double delta_time, const UserInput& input);
+
+  void rotate(const UnitQuatd& q) { orientation_ = q * orientation_; }
 };
 
 class PerspectiveCamera : public Camera {
@@ -119,5 +119,5 @@ class OrthographicCamera : public Camera {
   }
 };
 
-}  // namespace graphics
+}  // namespace camera
 }  // namespace soft_renderer

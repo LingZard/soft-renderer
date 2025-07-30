@@ -3,17 +3,21 @@
 #include <concepts>
 
 #include "../core/color.hpp"
-#include "../core/vertex.hpp"
-#include "../math/mat.hpp"
-#include "../math/vec.hpp"
+#include "../core/math/mat.hpp"
+#include "../core/math/vec.hpp"
 
 namespace soft_renderer {
-namespace graphics {
+namespace renderer {
 
 using namespace soft_renderer::core;
 
 class FlatShader {
  public:
+  struct Vertex {
+    Vec4f position;
+    Color color;
+  };
+
   struct Uniforms {
     Mat4f mvp;
   };
@@ -49,5 +53,5 @@ class FlatShader {
   };
 };
 
-}  // namespace graphics
+}  // namespace renderer
 }  // namespace soft_renderer

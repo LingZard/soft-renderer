@@ -1,8 +1,7 @@
 #pragma once
-#include "vertex.hpp"
 
 namespace soft_renderer {
-namespace core {
+namespace scene {
 
 enum class PrimitiveTopology {
   Points,
@@ -10,5 +9,5 @@ enum class PrimitiveTopology {
   Triangles,
 };
 
-}  // namespace core
+}  // namespace scene
 }  // namespace soft_renderer

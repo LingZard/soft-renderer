@@ -1,22 +1,22 @@
 #pragma once
 
-#include "camera.hpp"
+#include "../camera/camera.hpp"
+#include "pipeline_types.hpp"
 
 namespace soft_renderer {
-namespace graphics {
+namespace renderer {
+
+using namespace soft_renderer::camera;
 
 // Viewport aggregates a camera and the context for a specific rendering
 // operation. It does not own the camera.
 class Viewport {
  public:
-  // Pointer to the camera to use (does not own it).
   Camera* camera;
 
-  // Render target dimensions.
   int width;
   int height;
 
-  // Frustum planes.
   double near_plane;
   double far_plane;
 
@@ -48,12 +48,6 @@ class Viewport {
   }
 };
 
-struct ScreenCoord {
-  int x;
-  int y;
-  float depth;
-};
-
 class ViewportTransform {
  public:
   ViewportTransform(uint32_t x, uint32_t y, uint32_t width, uint32_t height)
@@ -76,5 +70,5 @@ class ViewportTransform {
   uint32_t height_;
 };
 
-}  // namespace graphics
+}  // namespace renderer
 }  // namespace soft_renderer
