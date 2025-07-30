@@ -1,5 +1,6 @@
 #pragma once
 
+#include "camera.hpp"
 #include "core.hpp"
 #include "io.hpp"
 #include "platform.hpp"

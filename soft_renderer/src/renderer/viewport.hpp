@@ -1,10 +1,12 @@
 #pragma once
 
-#include "camera.hpp"
+#include "../camera/camera.hpp"
 #include "pipeline_types.hpp"
 
 namespace soft_renderer {
 namespace renderer {
+
+using namespace soft_renderer::camera;
 
 // Viewport aggregates a camera and the context for a specific rendering
 // operation. It does not own the camera.

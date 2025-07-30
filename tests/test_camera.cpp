@@ -1,10 +1,10 @@
 #define CATCH_CONFIG_MAIN
 #include <catch2/catch_all.hpp>
 
+#include "soft_renderer/camera.hpp"
 #include "soft_renderer/core.hpp"
-#include "soft_renderer/renderer.hpp"
 
-using namespace soft_renderer::renderer;
+using namespace soft_renderer::camera;
 using namespace soft_renderer::math;
 
 TEST_CASE("Camera View Matrix", "[camera-view]") {

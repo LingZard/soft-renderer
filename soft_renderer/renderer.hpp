@@ -1,8 +1,6 @@
 #pragma once
 
-#include "src/renderer/camera.hpp"
 #include "src/renderer/clipping.hpp"
-#include "src/renderer/controllers.hpp"
 #include "src/renderer/pipeline_types.hpp"
 #include "src/renderer/rasterizer.hpp"
 #include "src/renderer/renderer.hpp"

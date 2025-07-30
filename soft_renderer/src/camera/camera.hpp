@@ -8,7 +8,7 @@
 #include "../core/math/vec.hpp"
 
 namespace soft_renderer {
-namespace renderer {
+namespace camera {
 
 using namespace soft_renderer::math;
 
@@ -119,5 +119,5 @@ class OrthographicCamera : public Camera {
   }
 };
 
-}  // namespace renderer
+}  // namespace camera
 }  // namespace soft_renderer
