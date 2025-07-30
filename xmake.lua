@@ -7,8 +7,9 @@ add_requires("minifb")
 -- soft-renderer library target
 target("soft-renderer")
     set_kind("static")
-    add_files("src/**.cpp")
-    add_includedirs("src")
+    add_files("soft_renderer/src/**.cpp")
+    add_includedirs("soft_renderer/src")
+    add_includedirs(".", {public = true})
     add_packages("minifb")
     set_languages("c++20")
 

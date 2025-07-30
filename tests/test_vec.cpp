@@ -2,7 +2,7 @@
 #include <catch2/catch_all.hpp>
 #include <type_traits>
 
-#include "../src/core/math/vec.hpp"
+#include "soft_renderer/core.hpp"
 
 using namespace soft_renderer::math;
 

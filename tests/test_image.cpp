@@ -3,9 +3,8 @@
 #include <filesystem>
 #include <string>
 
-#include "../src/core/color.hpp"
-#include "../src/core/image.hpp"
-#include "../src/io/tga_image.hpp"
+#include "soft_renderer/core.hpp"
+#include "soft_renderer/io.hpp"
 
 using namespace soft_renderer;
 

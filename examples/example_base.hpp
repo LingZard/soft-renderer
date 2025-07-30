@@ -3,14 +3,7 @@
 #include <functional>
 #include <string>
 
-#include "../src/core/framebuffer.hpp"
-#include "../src/core/math/mat.hpp"
-#include "../src/core/math/vec.hpp"
-#include "../src/platform/window.hpp"
-#include "../src/renderer/camera.hpp"
-#include "../src/renderer/renderer.hpp"
-#include "../src/renderer/shader.hpp"
-#include "../src/scene/primitive.hpp"
+#include "soft_renderer/all.hpp"
 
 namespace examples {
 

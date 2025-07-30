@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include "../src/core/framebuffer.hpp"
+#include "soft_renderer/core.hpp"
 
 using namespace soft_renderer;
 using namespace soft_renderer::core;

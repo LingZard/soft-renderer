@@ -13,6 +13,7 @@ namespace soft_renderer {
 namespace renderer {
 
 using namespace soft_renderer::core;
+using namespace soft_renderer::scene;
 
 template <Shader TShader>
 class Renderer {
