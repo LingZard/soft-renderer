@@ -9,15 +9,15 @@
 #include "core/framebuffer.hpp"
 #include "core/math/mat.hpp"
 #include "core/math/vec.hpp"
-#include "core/primitive.hpp"
-#include "graphics/camera.hpp"
-#include "graphics/renderer.hpp"
-#include "graphics/shader.hpp"
 #include "io/tga_image.hpp"
+#include "renderer/camera.hpp"
+#include "renderer/renderer.hpp"
+#include "renderer/shader.hpp"
+#include "scene/primitive.hpp"
 
 using namespace soft_renderer;
 using namespace soft_renderer::core;
-using namespace soft_renderer::graphics;
+using namespace soft_renderer::renderer;
 using namespace soft_renderer::io;
 using namespace soft_renderer::math;
 

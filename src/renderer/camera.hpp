@@ -9,7 +9,7 @@
 #include "../input/user_input.hpp"
 
 namespace soft_renderer {
-namespace graphics {
+namespace renderer {
 
 using namespace soft_renderer::math;
 using namespace soft_renderer::input;
@@ -30,7 +30,7 @@ const Vec3d kWorldUp = Vec3d(0.0, 1.0, 0.0);
 //   - Z-axis points inwards (into the screen)
 //   - Y-axis points upwards
 //   - X-axis points to the right
-// This is done to maintain compatibility with typical graphics pipelines.
+// This is done to maintain compatibility with typical renderer pipelines.
 class Camera;
 
 class ICameraController {
@@ -121,5 +121,5 @@ class OrthographicCamera : public Camera {
   }
 };
 
-}  // namespace graphics
+}  // namespace renderer
 }  // namespace soft_renderer

@@ -3,7 +3,7 @@
 #include "../core/math/vec.hpp"
 
 namespace soft_renderer {
-namespace graphics {
+namespace renderer {
 
 using namespace soft_renderer::core;
 
@@ -45,5 +45,5 @@ struct Fragment {
   typename TShader::Varyings varyings;
 };
 
-}  // namespace graphics
+}  // namespace renderer
 }  // namespace soft_renderer

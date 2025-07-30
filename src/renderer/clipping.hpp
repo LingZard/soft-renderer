@@ -9,7 +9,7 @@
 #include "pipeline_types.hpp"
 
 namespace soft_renderer {
-namespace graphics {
+namespace renderer {
 
 inline const std::array<math::Vec4f, 6> CanonicalViewVolumePlanes = {
     {{1, 0, 0, 1},
@@ -272,5 +272,5 @@ std::unique_ptr<ITriangleClipper<TVaryings>> create_triangle_clipper(
   return nullptr;
 }
 
-}  // namespace graphics
+}  // namespace renderer
 }  // namespace soft_renderer

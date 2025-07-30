@@ -3,14 +3,14 @@
 #include <vector>
 
 #include "../core/framebuffer.hpp"
-#include "../core/primitive.hpp"
+#include "../scene/primitive.hpp"
 #include "clipping.hpp"
 #include "pipeline_types.hpp"
 #include "rasterizer.hpp"
 #include "viewport.hpp"
 
 namespace soft_renderer {
-namespace graphics {
+namespace renderer {
 
 using namespace soft_renderer::core;
 
@@ -195,5 +195,5 @@ class Renderer {
   }
 };
 
-}  // namespace graphics
+}  // namespace renderer
 }  // namespace soft_renderer

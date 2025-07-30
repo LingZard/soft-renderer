@@ -2,9 +2,9 @@
 #include <catch2/catch_all.hpp>
 
 #include "../src/core/math/mat.hpp"
-#include "../src/graphics/camera.hpp"
+#include "../src/renderer/camera.hpp"
 
-using namespace soft_renderer::graphics;
+using namespace soft_renderer::renderer;
 using namespace soft_renderer::math;
 
 TEST_CASE("Camera View Matrix", "[camera-view]") {

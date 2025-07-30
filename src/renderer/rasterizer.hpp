@@ -7,7 +7,7 @@
 #include "viewport.hpp"
 
 namespace soft_renderer {
-namespace graphics {
+namespace renderer {
 
 using namespace soft_renderer::core;
 
@@ -138,5 +138,5 @@ class Rasterizer {
   }
 };
 
-}  // namespace graphics
+}  // namespace renderer
 }  // namespace soft_renderer

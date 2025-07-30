@@ -6,7 +6,7 @@
 // TODO
 
 namespace soft_renderer {
-namespace graphics {
+namespace renderer {
 
 using namespace soft_renderer::math;
 using namespace soft_renderer::input;
@@ -19,5 +19,5 @@ class OrbitController : public ICameraController {
   };
 };
 
-}  // namespace graphics
+}  // namespace renderer
 }  // namespace soft_renderer

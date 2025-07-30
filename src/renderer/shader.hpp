@@ -7,7 +7,7 @@
 #include "../core/math/vec.hpp"
 
 namespace soft_renderer {
-namespace graphics {
+namespace renderer {
 
 using namespace soft_renderer::core;
 
@@ -53,5 +53,5 @@ class FlatShader {
   };
 };
 
-}  // namespace graphics
+}  // namespace renderer
 }  // namespace soft_renderer
