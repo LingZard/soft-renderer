@@ -6,13 +6,11 @@
 #include "../core/math/mat.hpp"
 #include "../core/math/quat.hpp"
 #include "../core/math/vec.hpp"
-#include "../input/user_input.hpp"
 
 namespace soft_renderer {
 namespace renderer {
 
 using namespace soft_renderer::math;
-using namespace soft_renderer::input;
 
 const Vec3d kWorldUp = Vec3d(0.0, 1.0, 0.0);
 
@@ -36,8 +34,8 @@ class Camera;
 class ICameraController {
  public:
   virtual ~ICameraController() = default;
-  virtual void update(Camera& camera, double delta_time,
-                      const UserInput& input) = 0;
+  // virtual void update(Camera& camera, double delta_time,
+  //                     const UserInput& input) = 0;
 };
 
 class Camera {
@@ -79,7 +77,7 @@ class Camera {
 
   void set_controller(std::unique_ptr<ICameraController> controller);
 
-  void handle_input(double delta_time, const UserInput& input);
+  // void handle_input(double delta_time, const UserInput& input);
 
   void rotate(const UnitQuatd& q) { orientation_ = q * orientation_; }
 };
