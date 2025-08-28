@@ -27,6 +27,12 @@ enum class KeyCode {
   Q,  // Zoom in
   E,  // Zoom out
 
+  // Numbers for controller switching
+  KEY_1,
+  KEY_2,
+  KEY_3,
+  KEY_4,
+
   // Modifiers
   L_SHIFT,
   L_CTRL,

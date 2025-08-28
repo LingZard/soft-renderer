@@ -6,11 +6,13 @@
 #include "../core/math/mat.hpp"
 #include "../core/math/quat.hpp"
 #include "../core/math/vec.hpp"
+#include "../input/user_input.hpp"
 
 namespace soft_renderer {
 namespace camera {
 
 using namespace soft_renderer::math;
+using namespace soft_renderer::input;
 
 const Vec3d kWorldUp = Vec3d(0.0, 1.0, 0.0);
 
@@ -34,12 +36,12 @@ class Camera;
 class ICameraController {
  public:
   virtual ~ICameraController() = default;
-  // virtual void update(Camera& camera, double delta_time,
-  //                     const UserInput& input) = 0;
+  virtual void update(Camera& camera, double delta_time,
+                      const UserInput& input) = 0;
 };
 
 class Camera {
- private:
+ protected:
   // In an ECS, this would typically be a Transform component. In OOP, it could
   // be composition or inheritance. For this learning project, defining it
   // directly in the class is reasonable, especially since this is more of a
@@ -75,11 +77,35 @@ class Camera {
   virtual Mat4d get_projection_matrix(double aspect_ratio, double near,
                                       double far) const = 0;
 
-  void set_controller(std::unique_ptr<ICameraController> controller);
+  void set_controller(std::unique_ptr<ICameraController> controller) {
+    controller_ = std::move(controller);
+  }
 
-  // void handle_input(double delta_time, const UserInput& input);
+  void handle_input(double delta_time, const UserInput& input) {
+    if (controller_) {
+      controller_->update(*this, delta_time, input);
+    }
+  }
 
   void rotate(const UnitQuatd& q) { orientation_ = q * orientation_; }
+  void set_orientation(const UnitQuatd& orientation) {
+    orientation_ = orientation;
+  }
+  void set_position(const Vec3d& position) { position_ = position; }
+  void translate(const Vec3d& delta) { position_ += delta; }
+
+  void look_at(const Vec3d& target, const Vec3d& up = kWorldUp) {
+    Mat4d look_at_matrix = soft_renderer::math::look_at(position_, target, up);
+    orientation_ = UnitQuatd::from_rotation_matrix(look_at_matrix.rotation());
+  }
+
+  virtual void zoom(double factor) {
+    Vec3d forward = orientation_.rotate(Vec3d(0, 0, -1));
+    position_ += forward * factor;
+  }
+
+  const Vec3d& get_position() const { return position_; }
+  const UnitQuatd& get_orientation() const { return orientation_; }
 };
 
 class PerspectiveCamera : public Camera {
@@ -96,6 +122,11 @@ class PerspectiveCamera : public Camera {
   Mat4d get_projection_matrix(double aspect_ratio, double near,
                               double far) const override {
     return perspective(aspect_ratio, fov_y_rad_, near, far);
+  }
+
+  void zoom(double factor) override {
+    Vec3d forward = orientation_.rotate(Vec3d(0, 0, 1));
+    position_ += forward * factor;
   }
 };
 
@@ -116,6 +147,16 @@ class OrthographicCamera : public Camera {
   Mat4d get_projection_matrix(double aspect_ratio, double near,
                               double far) const override {
     return orthographic(left_, right_, bottom_, top_, near, far);
+  }
+
+  void zoom(double factor) override {
+    double scale = 1.0 + factor;
+    if (scale > 0.01) {
+      left_ *= scale;
+      right_ *= scale;
+      bottom_ *= scale;
+      top_ *= scale;
+    }
   }
 };
 

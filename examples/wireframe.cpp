@@ -59,7 +59,8 @@ int main() {
   UnitQuatd look_at_origin_rot(Vec3d(1.0, 0.0, 0.0), M_PI * 3.0 / 4.0);
   PerspectiveCamera camera(Vec3d(0, 0.4, 0.4), look_at_origin_rot, M_PI / 2.0);
 
-  ExampleRunner runner("Wireframe Sphere Example");
+  ExampleRunner runner(
+      "Wireframe Sphere Example - Press 1-4 to switch controllers");
   runner.run<FlatShader>(vertices, indices, PrimitiveTopology::Lines, camera);
 
   return 0;

@@ -192,6 +192,40 @@ class UnitQuat {
   static UnitQuat from_axis_angle(const Vec<T, 3>& axis, T angle_rad) {
     return UnitQuat(axis, angle_rad);
   }
+
+  static UnitQuat from_rotation_matrix(const Mat<T, 3, 3>& m) {
+    T trace = m(0, 0) + m(1, 1) + m(2, 2);
+
+    if (trace > 0) {
+      T s = std::sqrt(trace + 1.0) * 2;  // s = 4 * qw
+      T w = 0.25 * s;
+      T x = (m(2, 1) - m(1, 2)) / s;
+      T y = (m(0, 2) - m(2, 0)) / s;
+      T z = (m(1, 0) - m(0, 1)) / s;
+      return UnitQuat(Quat<T>(w, x, y, z));
+    } else if (m(0, 0) > m(1, 1) && m(0, 0) > m(2, 2)) {
+      T s = std::sqrt(1.0 + m(0, 0) - m(1, 1) - m(2, 2)) * 2;  // s = 4 * qx
+      T w = (m(2, 1) - m(1, 2)) / s;
+      T x = 0.25 * s;
+      T y = (m(0, 1) + m(1, 0)) / s;
+      T z = (m(0, 2) + m(2, 0)) / s;
+      return UnitQuat(Quat<T>(w, x, y, z));
+    } else if (m(1, 1) > m(2, 2)) {
+      T s = std::sqrt(1.0 + m(1, 1) - m(0, 0) - m(2, 2)) * 2;  // s = 4 * qy
+      T w = (m(0, 2) - m(2, 0)) / s;
+      T x = (m(0, 1) + m(1, 0)) / s;
+      T y = 0.25 * s;
+      T z = (m(1, 2) + m(2, 1)) / s;
+      return UnitQuat(Quat<T>(w, x, y, z));
+    } else {
+      T s = std::sqrt(1.0 + m(2, 2) - m(0, 0) - m(1, 1)) * 2;  // s = 4 * qz
+      T w = (m(1, 0) - m(0, 1)) / s;
+      T x = (m(0, 2) + m(2, 0)) / s;
+      T y = (m(1, 2) + m(2, 1)) / s;
+      T z = 0.25 * s;
+      return UnitQuat(Quat<T>(w, x, y, z));
+    }
+  }
 };
 
 // ===========================
