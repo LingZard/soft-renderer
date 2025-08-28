@@ -62,9 +62,15 @@ int main() {
   UnitQuatd look_at_origin_rot(Vec3d(1.0, 0.0, 0.0), M_PI * 3.0 / 4.0);
   PerspectiveCamera camera(Vec3d(0, 1, 2), look_at_origin_rot, M_PI / 2.0);
 
-  ExampleRunner runner("Triangle Sphere Example");
+  // Create an orbit controller to view the sphere
+  auto orbit_controller =
+      std::make_unique<camera::OrbitController>(Vec3d(0, 0, 0), 3.0);
+
+  ExampleRunner runner(
+      "Triangle Sphere Example - Use mouse to orbit, scroll to zoom, "
+      "Shift+drag to pan");
   runner.run<FlatShader>(vertices, indices, PrimitiveTopology::Triangles,
-                         camera);
+                         camera, std::move(orbit_controller));
 
   return 0;
 }

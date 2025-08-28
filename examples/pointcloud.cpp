@@ -45,7 +45,7 @@ int main() {
   UnitQuatd look_at_origin_rot(Vec3d(1.0, 0.0, 0.0), M_PI * 3.0 / 4.0);
   PerspectiveCamera camera(Vec3d(0, 3, 3), look_at_origin_rot, M_PI / 2.0);
 
-  ExampleRunner runner("Point Cloud Example");
+  ExampleRunner runner("Point Cloud Example - Press 1-4 to switch controllers");
   runner.run<FlatShader>(vertices, indices, PrimitiveTopology::Points, camera);
 
   return 0;

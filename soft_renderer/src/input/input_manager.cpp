@@ -109,6 +109,14 @@ KeyCode InputManager::platform_key_to_keycode(int platform_key) const {
       return KeyCode::Q;
     case KB_KEY_E:
       return KeyCode::E;
+    case KB_KEY_1:
+      return KeyCode::KEY_1;
+    case KB_KEY_2:
+      return KeyCode::KEY_2;
+    case KB_KEY_3:
+      return KeyCode::KEY_3;
+    case KB_KEY_4:
+      return KeyCode::KEY_4;
     case KB_KEY_LEFT_SHIFT:
       return KeyCode::L_SHIFT;
     case KB_KEY_LEFT_CONTROL:
