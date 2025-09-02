@@ -47,3 +47,12 @@ target("tests")
     add_deps("soft-renderer")
     add_packages("catch2")
     set_languages("c++20")
+
+-- textured_quad example
+target("textured_quad")
+    set_kind("binary")
+    add_files("examples/textured_quad.cpp")
+    add_deps("soft-renderer")
+    add_includedirs(".")
+    add_packages("minifb")
+    set_languages("c++20")

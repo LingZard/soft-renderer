@@ -86,7 +86,7 @@ class Renderer {
       if (framebuffer_.depth_test(screen_coord.x, screen_coord.y,
                                   screen_coord.depth)) {
         Color final_color = shader_.fragment(vary, uniforms);
-        RGBA8 color = to_rgba8(final_color);
+        RGBA8 color = linear_color_to_rgba8_srgb_exact(final_color);
         framebuffer_.set_pixel(screen_coord.x, screen_coord.y, color,
                                screen_coord.depth, false);
       }
@@ -123,7 +123,7 @@ class Renderer {
       // 3. Hand over to rasterizer with a fragment processing lambda
       rasterizer_.rasterize_line(sv0, sv1, [&](const Fragment<TShader>& frag) {
         Color final_color = shader_.fragment(frag.varyings, uniforms);
-        RGBA8 color = to_rgba8(final_color);
+        RGBA8 color = linear_color_to_rgba8_srgb_exact(final_color);
         framebuffer_.set_pixel(frag.screen_pos.x, frag.screen_pos.y, color,
                                frag.screen_pos.depth);
       });
@@ -184,7 +184,7 @@ class Renderer {
         rasterizer_.rasterize_triangle(
             sv_anchor, sv1, sv2, [&](const Fragment<TShader>& frag) {
               Color final_color = shader_.fragment(frag.varyings, uniforms);
-              RGBA8 color = to_rgba8(final_color);
+              RGBA8 color = linear_color_to_rgba8_srgb_exact(final_color);
               if (framebuffer_.depth_test(frag.screen_pos.x, frag.screen_pos.y,
                                           frag.screen_pos.depth)) {
                 framebuffer_.set_pixel(frag.screen_pos.x, frag.screen_pos.y,
