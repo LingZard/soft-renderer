@@ -38,6 +38,33 @@ struct SamplerState {
   float max_anisotropy = 1.0f;
 };
 
+// Thread-local gradient context for implicit grad-based sampling
+// NOTE: This is a hack to avoid passing the gradient context to the shader.
+//       GPU will handle the gradient context automatically.
+struct TextureSampleGradContextTLS {
+  bool enabled = false;
+  float dudx = 0.0f;
+  float dudy = 0.0f;
+  float dvdx = 0.0f;
+  float dvdy = 0.0f;
+};
+
+inline thread_local TextureSampleGradContextTLS g_texture_sample_grad_ctx{};
+
+struct TextureGradGuard {
+  TextureSampleGradContextTLS prev;
+  explicit TextureGradGuard(float in_dudx, float in_dudy, float in_dvdx,
+                            float in_dvdy) {
+    prev = g_texture_sample_grad_ctx;
+    g_texture_sample_grad_ctx.enabled = true;
+    g_texture_sample_grad_ctx.dudx = in_dudx;
+    g_texture_sample_grad_ctx.dudy = in_dudy;
+    g_texture_sample_grad_ctx.dvdx = in_dvdx;
+    g_texture_sample_grad_ctx.dvdy = in_dvdy;
+  }
+  ~TextureGradGuard() { g_texture_sample_grad_ctx = prev; }
+};
+
 template <typename PixelType>
 class Texture2D {
  public:
@@ -74,6 +101,8 @@ class Texture2D {
   void clear(const PixelType& value);
 
   void generate_mipmaps(FilterMode filter = FilterMode::Bilinear);
+
+  PixelType sample(float u, float v, const SamplerState& sampler) const;
 
   PixelType sample_uv(float u, float v, const SamplerState& sampler) const;
   PixelType sample_lod(float u, float v, float lod,
@@ -337,6 +366,18 @@ void Texture2D<PixelType>::generate_mipmaps(FilterMode /*filter*/) {
       }
     }
   }
+}
+
+template <typename PixelType>
+PixelType Texture2D<PixelType>::sample(float u, float v,
+                                       const SamplerState& sampler) const {
+  if (g_texture_sample_grad_ctx.enabled) {
+    return sample_grad(u, v, g_texture_sample_grad_ctx.dudx,
+                       g_texture_sample_grad_ctx.dudy,
+                       g_texture_sample_grad_ctx.dvdx,
+                       g_texture_sample_grad_ctx.dvdy, sampler);
+  }
+  return sample_uv(u, v, sampler);
 }
 
 // ------------ Sampling helpers ------------

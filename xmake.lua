@@ -48,10 +48,10 @@ target("tests")
     add_packages("catch2")
     set_languages("c++20")
 
--- textured_quad example
-target("textured_quad")
+-- african_head example
+target("african_head")
     set_kind("binary")
-    add_files("examples/textured_quad.cpp")
+    add_files("examples/african_head.cpp")
     add_deps("soft-renderer")
     add_includedirs(".")
     add_packages("minifb")

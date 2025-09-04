@@ -95,7 +95,7 @@ class TexturedShader {
     if (u.texture == nullptr || u.texture->empty()) {
       return {1.0f, 0.0f, 1.0f, 1.0f};
     }
-    RGBA8 c = u.texture->sample_uv(vary.uv.x(), vary.uv.y(), u.sampler);
+    RGBA8 c = u.texture->sample(vary.uv.x(), vary.uv.y(), u.sampler);
     return rgba8_to_linear_color(c);
   };
 };

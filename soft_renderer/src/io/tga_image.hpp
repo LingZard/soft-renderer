@@ -35,7 +35,7 @@ struct TGAHeader {
 
 // Reads a TGA image from a file.
 // This function currently supports uncompressed 24-bit (RGB) and 32-bit (RGBA)
-// TGA files.
+// TGA files, and RLE-compressed true-color (image_type 10) with 24/32bpp.
 inline Image<RGBA8> read_tga_image(const std::string& filename) {
   std::ifstream in(filename, std::ios::binary);
   if (!in) {
@@ -53,12 +53,11 @@ inline Image<RGBA8> read_tga_image(const std::string& filename) {
     return {};
   }
 
-  // We're keeping it simple and only supporting uncompressed, true-color
-  // images.
-  if (header.image_type != 2) {
-    std::cerr
-        << "Error: Only uncompressed TGA images are supported. Image type: "
-        << (int)header.image_type << std::endl;
+  // We're keeping it simple: support true-color images (uncompressed or RLE)
+  if (header.image_type != 2 && header.image_type != 10) {
+    std::cerr << "Error: Only uncompressed (2) or RLE (10) true-color TGA "
+                 "images are supported. Image type: "
+              << (int)header.image_type << std::endl;
     return {};
   }
 
@@ -69,28 +68,89 @@ inline Image<RGBA8> read_tga_image(const std::string& filename) {
     return {};
   }
 
+  if (header.colormap_type != 0) {
+    std::cerr << "Error: Color-mapped TGA images are not supported."
+              << std::endl;
+    return {};
+  }
+
   Image<RGBA8> image(header.width, header.height);
   // Skip over the image ID field if it exists.
   in.seekg(header.id_length, std::ios_base::cur);
 
   uint32_t n_pixels = header.width * header.height;
   uint8_t bytes_per_pixel = header.bits_per_pixel / 8;
-  std::vector<uint8_t> buffer(n_pixels * bytes_per_pixel);
-  in.read(reinterpret_cast<char*>(buffer.data()), buffer.size());
-  if (!in) {
-    std::cerr << "Error: Could not read pixel data from " << filename
-              << std::endl;
-    return {};
-  }
 
-  // TGA stores colors in BGR(A) order, so we need to swizzle them to RGB(A)
-  // when loading.
-  for (uint32_t i = 0; i < n_pixels; ++i) {
-    uint8_t b = buffer[i * bytes_per_pixel + 0];
-    uint8_t g = buffer[i * bytes_per_pixel + 1];
-    uint8_t r = buffer[i * bytes_per_pixel + 2];
-    uint8_t a = (bytes_per_pixel == 4) ? buffer[i * bytes_per_pixel + 3] : 255;
-    image.data()[i] = RGBA8(r, g, b, a);
+  if (header.image_type == 2) {
+    // Uncompressed true-color
+    std::vector<uint8_t> buffer(n_pixels * bytes_per_pixel);
+    in.read(reinterpret_cast<char*>(buffer.data()), buffer.size());
+    if (!in) {
+      std::cerr << "Error: Could not read pixel data from " << filename
+                << std::endl;
+      return {};
+    }
+
+    // TGA stores colors in BGR(A) order, so we need to swizzle them to RGB(A)
+    // when loading.
+    for (uint32_t i = 0; i < n_pixels; ++i) {
+      uint8_t b = buffer[i * bytes_per_pixel + 0];
+      uint8_t g = buffer[i * bytes_per_pixel + 1];
+      uint8_t r = buffer[i * bytes_per_pixel + 2];
+      uint8_t a =
+          (bytes_per_pixel == 4) ? buffer[i * bytes_per_pixel + 3] : 255;
+      image.data()[i] = RGBA8(r, g, b, a);
+    }
+  } else {
+    // RLE-compressed true-color (image_type == 10)
+    uint32_t written = 0;
+    while (written < n_pixels) {
+      uint8_t packet_header = 0;
+      in.read(reinterpret_cast<char*>(&packet_header), 1);
+      if (!in) {
+        std::cerr
+            << "Error: Unexpected end of file while reading RLE packet from "
+            << filename << std::endl;
+        return {};
+      }
+      uint32_t count =
+          (packet_header & 0x7F) + 1;  // number of pixels in packet
+      if (packet_header & 0x80) {
+        // RLE packet: one pixel repeated count times
+        uint8_t pix[4] = {0, 0, 0, 255};
+        in.read(reinterpret_cast<char*>(pix), bytes_per_pixel);
+        if (!in) {
+          std::cerr
+              << "Error: Unexpected end of file while reading RLE pixel from "
+              << filename << std::endl;
+          return {};
+        }
+        uint8_t b = pix[0];
+        uint8_t g = pix[1];
+        uint8_t r = pix[2];
+        uint8_t a = (bytes_per_pixel == 4) ? pix[3] : 255;
+        for (uint32_t k = 0; k < count && written < n_pixels; ++k) {
+          image.data()[written++] = RGBA8(r, g, b, a);
+        }
+      } else {
+        // Raw packet: count distinct pixels follow
+        for (uint32_t k = 0; k < count && written < n_pixels; ++k) {
+          uint8_t pix[4] = {0, 0, 0, 255};
+          in.read(reinterpret_cast<char*>(pix), bytes_per_pixel);
+          if (!in) {
+            std::cerr
+                << "Error: Unexpected end of file while reading raw pixel from "
+                << filename << std::endl;
+            return {};
+          }
+          uint8_t b = pix[0];
+          uint8_t g = pix[1];
+          uint8_t r = pix[2];
+          uint8_t a = (bytes_per_pixel == 4) ? pix[3] : 255;
+          image.data()[written++] = RGBA8(r, g, b, a);
+        }
+      }
+    }
   }
 
   // The TGA spec is a bit weird. The 5th bit of image_descriptor tells us the
