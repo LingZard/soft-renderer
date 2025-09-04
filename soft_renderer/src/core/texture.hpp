@@ -35,7 +35,7 @@ struct SamplerState {
   float lod_bias = 0.0f;
   float min_lod = 0.0f;
   float max_lod = 1000.0f;
-  float max_anisotropy = 1.0f;
+  float max_anisotropy = 1.0f;  // TODO
 };
 
 // Thread-local gradient context for implicit grad-based sampling
