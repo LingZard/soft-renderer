@@ -47,3 +47,12 @@ target("tests")
     add_deps("soft-renderer")
     add_packages("catch2")
     set_languages("c++20")
+
+-- african_head example
+target("african_head")
+    set_kind("binary")
+    add_files("examples/african_head.cpp")
+    add_deps("soft-renderer")
+    add_includedirs(".")
+    add_packages("minifb")
+    set_languages("c++20")
