@@ -67,7 +67,7 @@ class OrbitController : public ICameraController {
     if (input.mouse_delta.norm() > 0) {
       if (is_right_mouse_pressed) {
         // Pan
-        double pan_x = input.mouse_delta.x() * pan_sensitivity_ * distance_;
+        double pan_x = -input.mouse_delta.x() * pan_sensitivity_ * distance_;
         double pan_y = input.mouse_delta.y() * pan_sensitivity_ * distance_;
 
         target_ += pan_right * pan_x - pan_up * pan_y;

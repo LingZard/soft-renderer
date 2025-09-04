@@ -151,9 +151,10 @@ class Renderer {
 
       float signed_area =
           (sc1.x - sc0.x) * (sc2.y - sc0.y) - (sc2.x - sc0.x) * (sc1.y - sc0.y);
-      if (signed_area < 0) {
-        continue;
-      }
+      // skip back-face culling
+      // if (signed_area < 0) {
+      //   continue;
+      // }
 
       // 2. Triangle Clipping
       std::vector<Varyings> clipped_vertices =

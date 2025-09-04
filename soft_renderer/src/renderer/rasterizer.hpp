@@ -32,26 +32,29 @@ class Rasterizer {
     int min_y = std::min({p0.y(), p1.y(), p2.y()});
     int max_y = std::max({p0.y(), p1.y(), p2.y()});
 
-    // Back-face culling using 2D cross product on screen-space coordinates
-    // Why we need this? Back-face culling has been done between vertex-shader
-    // and clipper. But AI suggested this.
+    // Back-face handling: accept both windings; only reject degenerate
     float total_area = (p1 - p0).cross(p2 - p0);
-    if (total_area < 0) {
+    if (total_area == 0.0f) {
       return;
     }
-    float inv_total_area = 1.0f / std::abs(total_area);
+    float inv_total_area = 1.0f / total_area;
 
     for (int y = min_y; y <= max_y; ++y) {
       for (int x = min_x; x <= max_x; ++x) {
         math::Vec2i p = {x, y};
 
-        // 3. Compute barycentric coordinates
+        // 3. Compute barycentric coordinates (signed areas)
         int w0_signed_area = (p1 - p).cross(p2 - p);
         int w1_signed_area = (p2 - p).cross(p0 - p);
         int w2_signed_area = (p0 - p).cross(p1 - p);
 
         // 4. If pixel is inside the triangle (or on its edges)
-        if (w0_signed_area >= 0 && w1_signed_area >= 0 && w2_signed_area >= 0) {
+        bool inside = (total_area > 0.0f)
+                          ? (w0_signed_area >= 0 && w1_signed_area >= 0 &&
+                             w2_signed_area >= 0)
+                          : (w0_signed_area <= 0 && w1_signed_area <= 0 &&
+                             w2_signed_area <= 0);
+        if (inside) {
           float alpha = w0_signed_area * inv_total_area;
           float beta = w1_signed_area * inv_total_area;
           float gamma = w2_signed_area * inv_total_area;
