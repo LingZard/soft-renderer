@@ -7,6 +7,10 @@
 using namespace soft_renderer::camera;
 using namespace soft_renderer::math;
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 TEST_CASE("Camera View Matrix", "[camera-view]") {
   SECTION("Camera at origin with no rotation") {
     // The camera stores a CV-style pose (Y-down, Z-out).

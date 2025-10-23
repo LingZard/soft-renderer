@@ -6,6 +6,10 @@
 
 using namespace soft_renderer::math;
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 TEST_CASE("Mat basic construction and access", "[mat-basic]") {
   // Default constructor
   Mat<float, 2, 2> m1;
