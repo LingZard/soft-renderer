@@ -1,10 +1,10 @@
 #pragma once
 
+#include <stb_image.h>
+
 #include <string>
 
 #include "../core/image.hpp"
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
 
 namespace soft_renderer {
 namespace io {

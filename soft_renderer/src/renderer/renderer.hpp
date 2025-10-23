@@ -41,6 +41,13 @@ class Renderer {
   void draw(const std::vector<Vertex>& vertices,
             const std::vector<uint32_t>& indices, const Uniforms& uniforms,
             PrimitiveTopology topology, const ViewportTransform& viewport) {
+    bool use_weighted_blend = false;
+    if constexpr (requires { uniforms.material.alpha_mode; }) {
+      use_weighted_blend =
+          (uniforms.material.alpha_mode == TShader::Material::AlphaMode::Blend);
+    }
+    if (use_weighted_blend) ensure_accum_buffers();
+
     // Vertex Processing
     std::vector<Varyings> varyings;
     varyings.reserve(vertices.size());
@@ -51,15 +58,20 @@ class Renderer {
     // Primitive Assembly & Rasterization & fragment processing
     switch (topology) {
       case PrimitiveTopology::Points:
-        process_points(varyings, indices, uniforms, viewport);
+        process_points(varyings, indices, uniforms, viewport,
+                       use_weighted_blend);
         break;
       case PrimitiveTopology::Lines:
-        process_lines(varyings, indices, uniforms, viewport);
+        process_lines(varyings, indices, uniforms, viewport,
+                      use_weighted_blend);
         break;
       case PrimitiveTopology::Triangles:
-        process_triangles(varyings, indices, uniforms, viewport);
+        process_triangles(varyings, indices, uniforms, viewport,
+                          use_weighted_blend);
         break;
     }
+
+    if (use_weighted_blend) composite_weighted_over_framebuffer();
   }
 
  private:
@@ -69,10 +81,65 @@ class Renderer {
   std::unique_ptr<ITriangleClipper<Varyings>> triangle_clipper_;
   Rasterizer<TShader> rasterizer_;
 
+  // Weighted blended OIT buffers (allocated per draw if needed)
+  std::vector<math::Vec3f> accum_rgb_;
+  std::vector<float> accum_w_;
+  std::vector<float> accum_revealage_;
+
+  void ensure_accum_buffers() {
+    size_t sz =
+        static_cast<size_t>(framebuffer_.width()) * framebuffer_.height();
+    if (accum_rgb_.size() != sz) {
+      accum_rgb_.assign(sz, math::Vec3f(0.0f, 0.0f, 0.0f));
+      accum_w_.assign(sz, 0.0f);
+      accum_revealage_.assign(sz, 1.0f);
+    } else {
+      std::fill(accum_rgb_.begin(), accum_rgb_.end(),
+                math::Vec3f(0.0f, 0.0f, 0.0f));
+      std::fill(accum_w_.begin(), accum_w_.end(), 0.0f);
+      std::fill(accum_revealage_.begin(), accum_revealage_.end(), 1.0f);
+    }
+  }
+
+  void composite_weighted_over_framebuffer() {
+    uint32_t w = framebuffer_.width();
+    uint32_t h = framebuffer_.height();
+    const auto& img = framebuffer_.color_buffer();
+    for (uint32_t y = 0; y < h; ++y) {
+      for (uint32_t x = 0; x < w; ++x) {
+        size_t idx = static_cast<size_t>(y) * w + x;
+        float weight = accum_w_[idx];
+        float reveal = accum_revealage_[idx];
+        if (weight <= 0.0f && reveal >= 0.9999f)
+          continue;  // nothing accumulated
+
+        // Read destination (opaque) as background in linear
+        RGBA8 dst = img(x, y);
+        math::Vec3f dst_lin(
+            srgb_to_linear_component(static_cast<float>(dst.r) / 255.0f),
+            srgb_to_linear_component(static_cast<float>(dst.g) / 255.0f),
+            srgb_to_linear_component(static_cast<float>(dst.b) / 255.0f));
+
+        math::Vec3f accum = accum_rgb_[idx];
+        math::Vec3f blended;
+        if (weight > 0.0f) {
+          blended = accum * (1.0f / weight) + dst_lin * reveal;
+        } else {
+          blended = dst_lin * reveal;
+        }
+        Color out{blended.x(), blended.y(), blended.z(), 1.0f};
+        RGBA8 out_px = linear_color_to_rgba8_output(out);
+        framebuffer_.set_pixel(x, y, out_px, /*depth*/ 0.0f,
+                               /*test_depth*/ false);
+      }
+    }
+  }
+
   void process_points(const std::vector<Varyings>& varyings,
                       const std::vector<uint32_t>& indices,
                       const Uniforms& uniforms,
-                      const ViewportTransform& viewport) {
+                      const ViewportTransform& viewport,
+                      bool use_weighted_blend) {
     for (const auto& index : indices) {
       const auto& vary = varyings[index];
       // TODO: clipping
@@ -83,12 +150,31 @@ class Renderer {
 
       ScreenCoord screen_coord = viewport.ndc_to_screen(ndc);
 
-      if (framebuffer_.depth_test(screen_coord.x, screen_coord.y,
-                                  screen_coord.depth)) {
+      if (!use_weighted_blend) {
+        if (framebuffer_.depth_test(screen_coord.x, screen_coord.y,
+                                    screen_coord.depth)) {
+          Color final_color = shader_.fragment(vary, uniforms);
+          if (final_color.w() < 0.0f) {
+            return;
+          }
+          RGBA8 color = linear_color_to_rgba8_output(final_color);
+          framebuffer_.set_pixel(screen_coord.x, screen_coord.y, color,
+                                 screen_coord.depth, false);
+        }
+      } else {
         Color final_color = shader_.fragment(vary, uniforms);
-        RGBA8 color = linear_color_to_rgba8_srgb_exact(final_color);
-        framebuffer_.set_pixel(screen_coord.x, screen_coord.y, color,
-                               screen_coord.depth, false);
+        if (final_color.w() < 0.0f) continue;
+        float a = std::clamp(final_color.w(), 0.0f, 1.0f);
+        float depth = std::clamp(screen_coord.depth, 0.0f, 1.0f);
+        float w = a * std::max(1e-2f, std::pow(1.0f - depth, 4.0f));
+        size_t idx =
+            static_cast<size_t>(screen_coord.y) * framebuffer_.width() +
+            screen_coord.x;
+        accum_rgb_[idx] =
+            accum_rgb_[idx] +
+            math::Vec3f(final_color.x(), final_color.y(), final_color.z()) * w;
+        accum_w_[idx] += w;
+        accum_revealage_[idx] *= (1.0f - a);
       }
     }
   }
@@ -96,7 +182,8 @@ class Renderer {
   void process_lines(const std::vector<Varyings>& varyings,
                      const std::vector<uint32_t>& indices,
                      const Uniforms& uniforms,
-                     const ViewportTransform& viewport) {
+                     const ViewportTransform& viewport,
+                     bool use_weighted_blend) {
     for (size_t i = 0; i < indices.size(); i += 2) {
       const auto& v0 = varyings[indices[i]];
       const auto& v1 = varyings[indices[i + 1]];
@@ -123,9 +210,25 @@ class Renderer {
       // 3. Hand over to rasterizer with a fragment processing lambda
       rasterizer_.rasterize_line(sv0, sv1, [&](const Fragment<TShader>& frag) {
         Color final_color = shader_.fragment(frag.varyings, uniforms);
-        RGBA8 color = linear_color_to_rgba8_srgb_exact(final_color);
-        framebuffer_.set_pixel(frag.screen_pos.x, frag.screen_pos.y, color,
-                               frag.screen_pos.depth);
+        if (final_color.w() < 0.0f) return;  // alpha test discard
+        if (!use_weighted_blend) {
+          RGBA8 color = linear_color_to_rgba8_output(final_color);
+          framebuffer_.set_pixel(frag.screen_pos.x, frag.screen_pos.y, color,
+                                 frag.screen_pos.depth);
+        } else {
+          float a = std::clamp(final_color.w(), 0.0f, 1.0f);
+          float depth = std::clamp(frag.screen_pos.depth, 0.0f, 1.0f);
+          float w = a * std::max(1e-2f, std::pow(1.0f - depth, 4.0f));
+          size_t idx =
+              static_cast<size_t>(frag.screen_pos.y) * framebuffer_.width() +
+              frag.screen_pos.x;
+          accum_rgb_[idx] =
+              accum_rgb_[idx] +
+              math::Vec3f(final_color.x(), final_color.y(), final_color.z()) *
+                  w;
+          accum_w_[idx] += w;
+          accum_revealage_[idx] *= (1.0f - a);
+        }
       });
     }
   }
@@ -133,7 +236,8 @@ class Renderer {
   void process_triangles(const std::vector<Varyings>& varyings,
                          const std::vector<uint32_t>& indices,
                          const Uniforms& uniforms,
-                         const ViewportTransform& viewport) {
+                         const ViewportTransform& viewport,
+                         bool use_weighted_blend) {
     for (size_t i = 0; i < indices.size(); i += 3) {
       const auto& v0 = varyings[indices[i]];
       const auto& v1 = varyings[indices[i + 1]];
@@ -185,11 +289,28 @@ class Renderer {
         rasterizer_.rasterize_triangle(
             sv_anchor, sv1, sv2, [&](const Fragment<TShader>& frag) {
               Color final_color = shader_.fragment(frag.varyings, uniforms);
-              RGBA8 color = linear_color_to_rgba8_srgb_exact(final_color);
-              if (framebuffer_.depth_test(frag.screen_pos.x, frag.screen_pos.y,
-                                          frag.screen_pos.depth)) {
-                framebuffer_.set_pixel(frag.screen_pos.x, frag.screen_pos.y,
-                                       color, frag.screen_pos.depth, false);
+              if (final_color.w() < 0.0f) return;  // alpha test discard
+              if (!use_weighted_blend) {
+                RGBA8 color = linear_color_to_rgba8_output(final_color);
+                if (framebuffer_.depth_test(frag.screen_pos.x,
+                                            frag.screen_pos.y,
+                                            frag.screen_pos.depth)) {
+                  framebuffer_.set_pixel(frag.screen_pos.x, frag.screen_pos.y,
+                                         color, frag.screen_pos.depth, false);
+                }
+              } else {
+                float a = std::clamp(final_color.w(), 0.0f, 1.0f);
+                float depth = std::clamp(frag.screen_pos.depth, 0.0f, 1.0f);
+                float w = a * std::max(1e-2f, std::pow(1.0f - depth, 4.0f));
+                size_t idx = static_cast<size_t>(frag.screen_pos.y) *
+                                 framebuffer_.width() +
+                             frag.screen_pos.x;
+                accum_rgb_[idx] = accum_rgb_[idx] +
+                                  math::Vec3f(final_color.x(), final_color.y(),
+                                              final_color.z()) *
+                                      w;
+                accum_w_[idx] += w;
+                accum_revealage_[idx] *= (1.0f - a);
               }
             });
       }
