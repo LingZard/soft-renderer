@@ -1,5 +1,6 @@
 #include <cmath>
 #include <iostream>
+#include <numbers>
 #include <string>
 #include <vector>
 
@@ -28,9 +29,10 @@ int main() {
   }
 
   // 2) 相机与控制器
-  UnitQuatd look_at_origin_rot(Vec3d(1.0, 0.0, 0.0), M_PI * 0.75);
+  UnitQuatd look_at_origin_rot(Vec3d(1.0, 0.0, 0.0),
+                               std::numbers::pi_v<double> * 0.75);
   PerspectiveCamera camera(Vec3d(0.0, 0.6, 1.2), look_at_origin_rot,
-                           M_PI / 3.0);
+                           std::numbers::pi / 3.0);
 
   // 3) 纹理载入（JPEG）
   TextureRGBA8 base_color_tex;
@@ -91,7 +93,8 @@ int main() {
       mesh.vertices, mesh.indices, PrimitiveTopology::Triangles, camera,
       std::make_unique<OrbitController>(), [&](PBRShader::Uniforms& u) {
         // 变换：该模型导入需要绕X轴180°（注意：此前注释与代码轴不一致，这里按注释修正）
-        Mat4f model = create_rotation(Vec3f(1, 0, 0), static_cast<float>(M_PI));
+        Mat4f model = create_rotation(
+            Vec3f(1, 0, 0), static_cast<float>(std::numbers::pi_v<double>));
         u.model = model;
         Mat4f projection =
             Mat4f(camera.get_projection_matrix(800.0 / 600.0, 0.01, 100.0));

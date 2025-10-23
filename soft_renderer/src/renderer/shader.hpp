@@ -1,6 +1,7 @@
 #pragma once
 
 #include <concepts>
+#include <numbers>
 
 #include "../core/color.hpp"
 #include "../core/math/mat.hpp"
@@ -419,7 +420,7 @@ class PBRShader {
     float alpha = std::max(roughness * roughness, 1e-3f);
     float alpha2 = alpha * alpha;
     float denom = (NoH * NoH) * (alpha2 - 1.0f) + 1.0f;
-    float D = alpha2 / (M_PI * denom * denom + 1e-7f);
+    float D = alpha2 / (std::numbers::pi_v<float> * denom * denom + 1e-7f);
 
     auto G_Smith = [&](float NoX) {
       float k = (alpha + 1.0f);
@@ -445,7 +446,7 @@ class PBRShader {
     // Specular and diffuse
     Color specular = F * (D * G / std::max(1e-7f, 4.0f * NoV * NoL));
     Color kd = (Color{1.0f, 1.0f, 1.0f, 1.0f} - F) * (1.0f - metallic);
-    Color diffuse = kd * (base_color * (1.0f / static_cast<float>(M_PI)));
+    Color diffuse = kd * (base_color * (1.0f / std::numbers::pi_v<float>));
 
     // AO affects (approx) only diffuse term in absence of IBL
     float ao = 1.0f;
