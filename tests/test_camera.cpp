@@ -16,7 +16,7 @@ TEST_CASE("Camera View Matrix", "[camera-view]") {
     // The camera stores a CV-style pose (Y-down, Z-out).
     // The view matrix transforms to an OpenGL view space (Y-up, Z-in).
     // This requires a 180-degree rotation around the X-axis.
-    PerspectiveCamera cam({0, 0, 0}, UnitQuatd::identity(), M_PI_2);
+    PerspectiveCamera cam({0, 0, 0}, UnitQuatd::identity(), M_PI / 2.0);
     Mat4d view = cam.get_view_matrix();
 
     Mat4d expected_cv_to_gl = Mat4d::identity();
