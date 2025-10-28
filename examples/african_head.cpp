@@ -106,9 +106,9 @@ int main() {
   }
 
   // Camera
-  UnitQuatd look_at_origin_rot(Vec3d(1.0, 0.0, 0.0), M_PI);
+  UnitQuatd look_at_origin_rot(Vec3d(1.0, 0.0, 0.0), std::numbers::pi);
   PerspectiveCamera camera(Vec3d(0, 0, 1.5), look_at_origin_rot,
-                           M_PI * 2.0 / 3.0);
+                           std::numbers::pi * 2.0 / 3.0);
 
   // Load diffuse texture
   ImageRGBA8 img = io::read_tga_image(

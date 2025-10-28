@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <numbers>
 
 #include "camera.hpp"
 
@@ -20,8 +21,8 @@ class OrbitController : public ICameraController {
 
   double azimuth_ = 0.0;
   double elevation_ = 0.0;
-  double min_elevation_ = -M_PI / 2 + 0.01;
-  double max_elevation_ = M_PI / 2 - 0.01;
+  double min_elevation_ = -std::numbers::pi / 2 + 0.01;
+  double max_elevation_ = std::numbers::pi / 2 - 0.01;
 
   double rotate_sensitivity_ = 0.005;
   double zoom_sensitivity_ = 1.0;
@@ -36,7 +37,7 @@ class OrbitController : public ICameraController {
               const UserInput& input) override {
     if (!is_initialized_) {
       // Camera position is stored in CV coordinate system. Convert to GL first.
-      UnitQuatd q_cv_to_gl = UnitQuatd(Vec3d(1.0, 0.0, 0.0), M_PI);
+      UnitQuatd q_cv_to_gl = UnitQuatd(Vec3d(1.0, 0.0, 0.0), std::numbers::pi);
       Vec3d pos_gl = q_cv_to_gl.rotate(camera.get_position());
 
       Vec3d offset = pos_gl - target_;
@@ -78,8 +79,8 @@ class OrbitController : public ICameraController {
 
         elevation_ = std::clamp(elevation_, min_elevation_, max_elevation_);
 
-        azimuth_ = fmod(azimuth_, 2.0 * M_PI);
-        if (azimuth_ < 0) azimuth_ += 2.0 * M_PI;
+        azimuth_ = std::fmod(azimuth_, 2.0 * std::numbers::pi);
+        if (azimuth_ < 0) azimuth_ += 2.0 * std::numbers::pi;
       }
     }
 
@@ -113,7 +114,7 @@ class OrbitController : public ICameraController {
         UnitQuatd::from_rotation_matrix(rot_gl_world_to_cam.transpose());
 
     // 2. Define the GL-to-CV transform (180-degree rotation around X-axis)
-    UnitQuatd q_gl_to_cv = UnitQuatd(Vec3d(1.0, 0.0, 0.0), M_PI);
+    UnitQuatd q_gl_to_cv = UnitQuatd(Vec3d(1.0, 0.0, 0.0), std::numbers::pi);
 
     // 3. Convert position and orientation from GL to CV
     Vec3d camera_position_cv = q_gl_to_cv.rotate(camera_position_gl);

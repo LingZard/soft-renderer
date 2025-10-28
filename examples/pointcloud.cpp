@@ -18,8 +18,10 @@ std::vector<FlatShader::Vertex> create_torus_point_cloud(int num_points,
   vertices.reserve(num_points);
 
   for (int i = 0; i < num_points; ++i) {
-    float u = static_cast<float>(rand()) / RAND_MAX * 2.0f * M_PI;
-    float v = static_cast<float>(rand()) / RAND_MAX * 2.0f * M_PI;
+    float u = static_cast<float>(rand()) / RAND_MAX * 2.0f *
+              static_cast<float>(std::numbers::pi);
+    float v = static_cast<float>(rand()) / RAND_MAX * 2.0f *
+              static_cast<float>(std::numbers::pi);
 
     float x = (R + r * cos(v)) * cos(u);
     float y = r * sin(v);
@@ -42,8 +44,10 @@ int main() {
   std::vector<uint32_t> indices(num_points);
   std::iota(indices.begin(), indices.end(), 0);
 
-  UnitQuatd look_at_origin_rot(Vec3d(1.0, 0.0, 0.0), M_PI * 3.0 / 4.0);
-  PerspectiveCamera camera(Vec3d(0, 3, 3), look_at_origin_rot, M_PI / 2.0);
+  UnitQuatd look_at_origin_rot(Vec3d(1.0, 0.0, 0.0),
+                               std::numbers::pi * 3.0 / 4.0);
+  PerspectiveCamera camera(Vec3d(0, 3, 3), look_at_origin_rot,
+                           std::numbers::pi / 2.0);
 
   ExampleRunner runner("Point Cloud Example - Press 1-4 to switch controllers");
   runner.run<FlatShader>(vertices, indices, PrimitiveTopology::Points, camera);

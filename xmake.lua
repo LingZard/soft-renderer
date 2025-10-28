@@ -3,6 +3,8 @@ set_languages("c++20")
 
 add_requires("catch2 v3.8.1")
 add_requires("minifb")
+add_requires("stb")
+add_requires("tinygltf")
 
 -- soft-renderer library target
 target("soft-renderer")
@@ -10,7 +12,7 @@ target("soft-renderer")
     add_files("soft_renderer/src/**.cpp")
     add_includedirs("soft_renderer/src")
     add_includedirs(".", {public = true})
-    add_packages("minifb")
+    add_packages("minifb", "stb", "tinygltf")
     set_languages("c++20")
 
 -- pointcloud example
@@ -55,4 +57,13 @@ target("african_head")
     add_deps("soft-renderer")
     add_includedirs(".")
     add_packages("minifb")
+    set_languages("c++20")
+
+-- pbr chandelier example
+target("pbr_chandelier")
+    set_kind("binary")
+    add_files("examples/pbr_chandelier.cpp")
+    add_deps("soft-renderer")
+    add_includedirs(".")
+    add_packages("minifb", "stb", "tinygltf")
     set_languages("c++20")

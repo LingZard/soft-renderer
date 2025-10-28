@@ -19,10 +19,10 @@ std::pair<std::vector<FlatShader::Vertex>, std::vector<uint32_t>> create_sphere(
   // Generate vertices
   for (int i = 0; i <= rings; ++i) {
     float v = static_cast<float>(i) / rings;
-    float phi = v * M_PI;
+    float phi = v * static_cast<float>(std::numbers::pi);
     for (int j = 0; j <= segments; ++j) {
       float u = static_cast<float>(j) / segments;
-      float theta = u * 2.0f * M_PI;
+      float theta = u * 2.0f * static_cast<float>(std::numbers::pi);
 
       float x = cos(theta) * sin(phi);
       float y = cos(phi);
@@ -56,8 +56,10 @@ std::pair<std::vector<FlatShader::Vertex>, std::vector<uint32_t>> create_sphere(
 int main() {
   auto [vertices, indices] = create_sphere(32, 16);
 
-  UnitQuatd look_at_origin_rot(Vec3d(1.0, 0.0, 0.0), M_PI * 3.0 / 4.0);
-  PerspectiveCamera camera(Vec3d(0, 0.4, 0.4), look_at_origin_rot, M_PI / 2.0);
+  UnitQuatd look_at_origin_rot(Vec3d(1.0, 0.0, 0.0),
+                               std::numbers::pi * 3.0 / 4.0);
+  PerspectiveCamera camera(Vec3d(0, 0.4, 0.4), look_at_origin_rot,
+                           std::numbers::pi / 2.0);
 
   ExampleRunner runner(
       "Wireframe Sphere Example - Press 1-4 to switch controllers");

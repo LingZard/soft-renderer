@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <memory>
+#include <numbers>
 
 #include "../core/math/mat.hpp"
 #include "../core/math/quat.hpp"
@@ -62,7 +63,7 @@ class Camera {
     UnitQuatd q_world2cv = orientation_.inverse();
     Vec3d t_world2cv = -(q_world2cv.rotate(position_));
     // The CV-to-GL conversion is a 180-degree rotation around the X-axis.
-    UnitQuatd q_cv2gl = UnitQuatd(Vec3d(1.0, 0.0, 0.0), M_PI);
+    UnitQuatd q_cv2gl = UnitQuatd(Vec3d(1.0, 0.0, 0.0), std::numbers::pi);
     UnitQuatd q_world2gl = q_cv2gl * q_world2cv;
     Vec3d t_world2gl = q_cv2gl.rotate(t_world2cv);
     Mat3d rot = q_world2gl.to_rotation_matrix();
