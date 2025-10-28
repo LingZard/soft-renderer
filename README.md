@@ -1,33 +1,70 @@
-# C++17 XMake Project
+# soft-renderer (learning project)
 
-This project is a standard C++17 application scaffolded with xmake. It includes:
-- C++17 support
-- xmake build system
-- Source files in `src/`
-- (Planned) Unit tests in `tests/`
+This is a CPU-only, learning-oriented software renderer. The goal is to make a clear and readable implementation of a classic rasterization pipeline and the core bits of PBR.
 
-## Build
+Heads-up: PBRShader is still work-in-progress, and there are known bugs to fix. This is intentional for learning and iteration.
 
+## How to run
+
+1) Update example asset paths to match your machine (or make them relative to the project root `assets/`):
+- `examples/pbr_chandelier.cpp`
+- `examples/african_head.cpp`
+
+2) Build and run with xmake:
 ```sh
-xmake
+xmake -y
+xmake run pointcloud
+# others:
+# xmake run african_head
+# xmake run triangles
+# xmake run wireframe
+# xmake run pointcloud
 ```
 
-## Run
+## What’s included
 
-```sh
-xmake run
-```
+- Core pipeline
+  - Vertex processing → clipping → perspective divide → rasterization → fragment shading → output
+  - Triangle rasterizer using bounding-box scan and edge functions
+  - Perspective-correct interpolation for attributes and depth
+  - Viewport transform and depth buffer testing
 
-## Configure C++ Standard (already set to C++17)
+- Clipping
+  - Lines: Liang–Barsky
+  - Triangles: Sutherland–Hodgman (to clip space, then retriangulate)
 
-```sh
-xmake f --cxxflags='-std=c++17'
-```
+- Shaders
+  - `FlatShader`: solid vertex color
+  - `TexturedShader`: textured with UVs
+  - `PBRShader` (WIP): physically based BRDF with metallic-roughness inputs
 
-## Add Tests
 
-Place your test files in the `tests/` directory. Catch2 is recommended for unit testing.
+- Texturing
+  - SamplerState: address (Clamp/Repeat/Mirror/Border), filtering (Nearest/Bilinear), mip filter (None/Nearest/Linear)
+  - Mipmap generation: simple 2×2 box downsampling
+  - UV origin configurable (TopLeft / BottomLeft)
+  - Per-texture color space: sRGB vs Linear
+  - Screen-space UV gradients for LOD selection (finite differences on neighbors)
 
----
+- Color & output
+  - Internal linear space processing
+  - Exposure (EV) + tone mapping: Linear→sRGB, Reinhard, ACES
 
-For more information, see the [xmake documentation](https://xmake.io/).
+- IO & assets
+  - glTF (TinyGLTF): loads positions / normals / texcoord0 (+ optional tangent/texcoord1), factors, texture paths, and `KHR_texture_transform`
+  - Images via stb_image
+  - For simplicity, the glTF loader takes the first mesh/primitive
+
+- Framework
+  - Window/input (minifb), Orbit camera controller, Perspective/Orthographic cameras
+  - Ground plane and XYZ axes helpers for scene orientation
+
+- Examples
+  - `pbr_chandelier.cpp` (PBR, glTF)
+  - `african_head.cpp` (textured OBJ)
+  - `triangles.cpp`, `wireframe.cpp`, `pointcloud.cpp`
+
+## Status
+- PBRShader: WIP (features are being filled in and tuned)
+- Some known bugs remain;
+- Extras like IBL/shadows/clearcoat are intentionally left out for now
